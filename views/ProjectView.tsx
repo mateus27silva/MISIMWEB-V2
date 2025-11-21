@@ -1,4 +1,5 @@
-import React, { useState, useRef, DragEvent, useEffect } from 'react';
+
+import React, { useState, useRef, useEffect } from 'react';
 import { 
   Settings2, 
   Hammer, 
@@ -11,7 +12,10 @@ import {
   Save,
   RotateCcw,
   AlertTriangle,
-  X
+  X,
+  Edit,
+  MoreHorizontal,
+  Check
 } from 'lucide-react';
 import { 
   NodeType, 
@@ -35,32 +39,38 @@ const EQUIPMENT_CONFIGS: Record<NodeType, EquipmentConfig> = {
   'Mixer': { 
     type: 'Mixer', icon: Shuffle, label: 'Mixer', color: 'bg-purple-100 border-purple-500 text-purple-700',
     inputs: [{ id: 'in1', type: 'input' }, { id: 'in2', type: 'input' }],
-    outputs: [{ id: 'out1', type: 'output' }]
+    outputs: [{ id: 'out1', type: 'output' }],
+    defaultParameters: { efficiency: 95, power: 10 }
   },
   'Moinho': { 
     type: 'Moinho', icon: Settings2, label: 'Moinho', color: 'bg-blue-100 border-blue-500 text-blue-700',
     inputs: [{ id: 'feed', type: 'input', label: 'Feed' }],
-    outputs: [{ id: 'discharge', type: 'output', label: 'Product' }]
+    outputs: [{ id: 'discharge', type: 'output', label: 'Product' }],
+    defaultParameters: { diameter: 4.5, length: 6.0, workIndex: 12.5, filling: 35 }
   },
   'Britador': { 
     type: 'Britador', icon: Hammer, label: 'Britador', color: 'bg-slate-200 border-slate-500 text-slate-700',
     inputs: [{ id: 'feed', type: 'input' }],
-    outputs: [{ id: 'product', type: 'output' }]
+    outputs: [{ id: 'product', type: 'output' }],
+    defaultParameters: { css: 12, power: 110, capacity: 300 }
   },
   'Rougher': { 
     type: 'Rougher', icon: Layers, label: 'Rougher', color: 'bg-green-100 border-green-500 text-green-700',
     inputs: [{ id: 'feed', type: 'input' }],
-    outputs: [{ id: 'conc', type: 'output', label: 'Conc' }, { id: 'tail', type: 'output', label: 'Tail' }]
+    outputs: [{ id: 'conc', type: 'output', label: 'Conc' }, { id: 'tail', type: 'output', label: 'Tail' }],
+    defaultParameters: { residenceTime: 15, recovery: 85, airFlow: 50 }
   },
   'Cleaner': { 
     type: 'Cleaner', icon: Boxes, label: 'Cleaner', color: 'bg-teal-100 border-teal-500 text-teal-700',
     inputs: [{ id: 'feed', type: 'input' }],
-    outputs: [{ id: 'conc', type: 'output' }, { id: 'tail', type: 'output' }]
+    outputs: [{ id: 'conc', type: 'output' }, { id: 'tail', type: 'output' }],
+    defaultParameters: { residenceTime: 20, recovery: 90 }
   },
   'Reacleanner': { 
     type: 'Reacleanner', icon: Boxes, label: 'Reacleanner', color: 'bg-emerald-100 border-emerald-500 text-emerald-700',
     inputs: [{ id: 'feed', type: 'input' }],
-    outputs: [{ id: 'conc', type: 'output' }, { id: 'tail', type: 'output' }]
+    outputs: [{ id: 'conc', type: 'output' }, { id: 'tail', type: 'output' }],
+    defaultParameters: { residenceTime: 25, recovery: 92 }
   },
 };
 
@@ -75,8 +85,6 @@ export const ProjectView: React.FC<ProjectViewProps> = ({
 }) => {
   // Local UI State (Selection, Dragging, Tools)
   const [tool, setTool] = useState<'pointer' | 'connection'>('pointer');
-  const [selectedNode, setSelectedNode] = useState<string | null>(null);
-  const [selectedConnection, setSelectedConnection] = useState<string | null>(null);
   
   // Interaction State
   const [draggingNode, setDraggingNode] = useState<{id: string, offsetX: number, offsetY: number} | null>(null);
@@ -90,6 +98,18 @@ export const ProjectView: React.FC<ProjectViewProps> = ({
     currX: number;
     currY: number;
   } | null>(null);
+
+  // --- NEW: Context Menu & Edit Modal State ---
+  const [activeItem, setActiveItem] = useState<{
+    id: string;
+    type: 'node' | 'connection';
+    x: number;
+    y: number;
+    data?: any; // Holds current config
+  } | null>(null);
+
+  const [editModalOpen, setEditModalOpen] = useState(false);
+  const [editFormData, setEditFormData] = useState<Record<string, any>>({});
 
   // Modal State
   const [showClearModal, setShowClearModal] = useState(false);
@@ -131,12 +151,12 @@ export const ProjectView: React.FC<ProjectViewProps> = ({
 
   // --- Drag New Node from Sidebar ---
 
-  const handleSidebarDragStart = (e: DragEvent, type: string) => {
+  const handleSidebarDragStart = (e: React.DragEvent<HTMLDivElement>, type: string) => {
     e.dataTransfer.setData('application/reactflow', type);
     e.dataTransfer.effectAllowed = 'move';
   };
 
-  const handleSidebarDrop = (e: DragEvent) => {
+  const handleSidebarDrop = (e: React.DragEvent<HTMLDivElement>) => {
     e.preventDefault();
     if (!canvasRef.current) return;
 
@@ -152,13 +172,14 @@ export const ProjectView: React.FC<ProjectViewProps> = ({
       type,
       x,
       y,
-      label: type
+      label: type,
+      parameters: { ...EQUIPMENT_CONFIGS[type].defaultParameters }
     };
 
     setNodes((nds) => [...nds, newNode]);
   };
 
-  const handleDragOver = (e: DragEvent) => {
+  const handleDragOver = (e: React.DragEvent<HTMLDivElement>) => {
     e.preventDefault();
     e.dataTransfer.dropEffect = 'move';
   };
@@ -168,18 +189,20 @@ export const ProjectView: React.FC<ProjectViewProps> = ({
   const handleNodeMouseDown = (e: React.MouseEvent, nodeId: string) => {
     e.stopPropagation();
     
-    if (tool === 'connection') {
-        // In connection mode, clicking a node doesn't drag it.
-        // It could potentially start a connection if we wanted node-center connections, 
-        // but we stick to ports or space for now.
-        return; 
+    // If left-click, we usually just want to drag OR start a connection, NOT open the menu.
+    // We close the menu if it was open elsewhere.
+    if (activeItem) {
+        setActiveItem(null);
     }
 
-    setSelectedNode(nodeId);
-    setSelectedConnection(null);
-    
     const node = nodes.find(n => n.id === nodeId);
+
+    if (tool === 'connection') {
+       return; 
+    }
+
     if (node) {
+      // Start Dragging
       setDraggingNode({
         id: nodeId,
         offsetX: e.nativeEvent.offsetX,
@@ -188,10 +211,30 @@ export const ProjectView: React.FC<ProjectViewProps> = ({
     }
   };
 
+  const handleNodeContextMenu = (e: React.MouseEvent, nodeId: string) => {
+      e.preventDefault(); // Prevent browser context menu
+      e.stopPropagation();
+
+      const node = nodes.find(n => n.id === nodeId);
+      if (node) {
+          setActiveItem({
+              id: nodeId,
+              type: 'node',
+              x: node.x + NODE_WIDTH / 2,
+              y: node.y - 10,
+              data: node
+          });
+      }
+  };
+
   // --- Connection Logic (Ports & Canvas) ---
 
   // 1. Start Drawing from Canvas
   const handleCanvasMouseDown = (e: React.MouseEvent) => {
+    // Close context menu if clicking canvas
+    setActiveItem(null);
+    setEditModalOpen(false);
+
     if (tool === 'connection' && canvasRef.current) {
         const bounds = canvasRef.current.getBoundingClientRect();
         const x = e.clientX - bounds.left;
@@ -203,19 +246,15 @@ export const ProjectView: React.FC<ProjectViewProps> = ({
             currX: x,
             currY: y
         });
-        
-        // Deselect everything when starting to draw on canvas
-        setSelectedNode(null);
-        setSelectedConnection(null);
-    } else if (tool === 'pointer') {
-        setSelectedNode(null);
-        setSelectedConnection(null);
     }
   };
 
   // 2. Start Drawing from Port
   const handlePortMouseDown = (e: React.MouseEvent, nodeId: string, portId: string) => {
     e.stopPropagation();
+    // Close menu
+    setActiveItem(null);
+
     const bounds = canvasRef.current?.getBoundingClientRect();
     if (!bounds) return;
 
@@ -223,7 +262,6 @@ export const ProjectView: React.FC<ProjectViewProps> = ({
     const startX = portPos ? portPos.x : e.clientX - bounds.left;
     const startY = portPos ? portPos.y : e.clientY - bounds.top;
 
-    // We allow drawing from a port in both modes for better UX
     setDrawingLine({
         fromNode: nodeId,
         fromPort: portId,
@@ -240,13 +278,11 @@ export const ProjectView: React.FC<ProjectViewProps> = ({
     e.preventDefault();
     
     if (drawingLine) {
-        // Check if valid connection loop
         if (drawingLine.fromNode === nodeId) {
             setDrawingLine(null);
             return;
         }
 
-        // Create Connection
         const newConn: Connection = {
             id: `conn_${Date.now()}`,
             fromNode: drawingLine.fromNode,
@@ -254,16 +290,13 @@ export const ProjectView: React.FC<ProjectViewProps> = ({
             fromX: drawingLine.fromNode ? undefined : drawingLine.startX,
             fromY: drawingLine.fromNode ? undefined : drawingLine.startY,
             toNode: nodeId,
-            toPort: portId
+            toPort: portId,
+            parameters: { flowRate: 0, solidsPct: 0 } // Default stream data
         };
 
-        // Avoid duplicates
         const exists = connections.some(c => 
-           (c.fromNode === newConn.fromNode && c.fromPort === newConn.fromPort && 
-            c.toNode === newConn.toNode && c.toPort === newConn.toPort) ||
-           // Check coordinate based duplicate (simplified)
-           (c.fromX === newConn.fromX && c.fromY === newConn.fromY &&
-            c.toNode === newConn.toNode && c.toPort === newConn.toPort)
+           c.fromNode === newConn.fromNode && c.fromPort === newConn.fromPort && 
+           c.toNode === newConn.toNode && c.toPort === newConn.toPort
         );
 
         if (!exists) {
@@ -293,6 +326,9 @@ export const ProjectView: React.FC<ProjectViewProps> = ({
             }
             return n;
         }));
+        
+        // If dragging, hide the context menu
+        if (activeItem) setActiveItem(null);
     }
 
     // Handle Line Drawing Update
@@ -306,7 +342,6 @@ export const ProjectView: React.FC<ProjectViewProps> = ({
     setDraggingNode(null);
 
     if (drawingLine) {
-        // Only create loose end connection if length is significant or if it started from a node
         const dist = Math.sqrt(
             Math.pow(drawingLine.currX - drawingLine.startX, 2) + 
             Math.pow(drawingLine.currY - drawingLine.startY, 2)
@@ -320,7 +355,8 @@ export const ProjectView: React.FC<ProjectViewProps> = ({
                 fromX: drawingLine.fromNode ? undefined : drawingLine.startX,
                 fromY: drawingLine.fromNode ? undefined : drawingLine.startY,
                 toX: drawingLine.currX,
-                toY: drawingLine.currY
+                toY: drawingLine.currY,
+                parameters: { flowRate: 0, solidsPct: 0 }
             };
             setConnections(prev => [...prev, newConn]);
         }
@@ -328,36 +364,100 @@ export const ProjectView: React.FC<ProjectViewProps> = ({
     }
   };
 
-  // --- Helpers ---
+  // --- Connection Interaction ---
+  const handleConnectionContextMenu = (e: React.MouseEvent, conn: Connection) => {
+      e.preventDefault(); // Prevent browser context menu
+      e.stopPropagation();
+      
+      // Calculate center of line for menu position (approx)
+      let x = 0, y = 0;
+      if (conn.toX && conn.fromX) {
+          x = (conn.fromX + conn.toX) / 2;
+          y = (conn.fromY! + conn.toY!) / 2;
+      } else if (conn.toNode && conn.fromNode) {
+          const from = nodes.find(n => n.id === conn.fromNode);
+          const to = nodes.find(n => n.id === conn.toNode);
+          if (from && to) {
+            x = (from.x + NODE_WIDTH + to.x) / 2;
+            y = (from.y + NODE_HEIGHT/2 + to.y + NODE_HEIGHT/2) / 2;
+          }
+      } else {
+          x = e.nativeEvent.offsetX;
+          y = e.nativeEvent.offsetY;
+      }
 
-  const deleteSelected = () => {
-    if (selectedNode) {
-      setNodes(nodes.filter(n => n.id !== selectedNode));
-      setConnections(connections.filter(c => c.fromNode !== selectedNode && c.toNode !== selectedNode));
-      setSelectedNode(null);
+      setActiveItem({
+          id: conn.id,
+          type: 'connection',
+          x,
+          y,
+          data: conn
+      });
+  };
+
+  // --- Actions (Delete, Edit) ---
+
+  const handleDeleteActive = () => {
+    if (!activeItem) return;
+    if (activeItem.type === 'node') {
+      setNodes(nodes.filter(n => n.id !== activeItem.id));
+      setConnections(connections.filter(c => c.fromNode !== activeItem.id && c.toNode !== activeItem.id));
+    } else {
+      setConnections(connections.filter(c => c.id !== activeItem.id));
     }
-    if (selectedConnection) {
-        setConnections(connections.filter(c => c.id !== selectedConnection));
-        setSelectedConnection(null);
-    }
+    setActiveItem(null);
+  };
+
+  const handleEditActive = () => {
+      if (!activeItem) return;
+      
+      let initialData = {};
+      if (activeItem.type === 'node') {
+          const node = nodes.find(n => n.id === activeItem.id);
+          initialData = node?.parameters || {};
+      } else {
+          const conn = connections.find(c => c.id === activeItem.id);
+          initialData = conn?.parameters || {};
+      }
+      
+      setEditFormData(initialData);
+      setEditModalOpen(true);
+      // Keep activeItem set so we know what we are editing
+  };
+
+  const handleSaveEdit = () => {
+      if (!activeItem) return;
+
+      if (activeItem.type === 'node') {
+          setNodes(nds => nds.map(n => {
+              if (n.id === activeItem.id) {
+                  return { ...n, parameters: editFormData };
+              }
+              return n;
+          }));
+      } else {
+          setConnections(conns => conns.map(c => {
+              if (c.id === activeItem.id) {
+                  return { ...c, parameters: editFormData };
+              }
+              return c;
+          }));
+      }
+      setEditModalOpen(false);
+      setActiveItem(null);
   };
 
   const confirmClearCanvas = () => {
       setNodes([]);
       setConnections([]);
-      setSelectedNode(null);
-      setSelectedConnection(null);
+      setActiveItem(null);
       setShowClearModal(false);
   };
 
   // Generate Bezier Path
   const getPath = (x1: number, y1: number, x2: number, y2: number) => {
      const dist = Math.sqrt(Math.pow(x2 - x1, 2) + Math.pow(y2 - y1, 2)) * 0.4;
-     // If points are close, reduce curvature
      const controlDist = Math.min(Math.max(dist, 20), 150);
-     
-     // Simple logic: assume left-to-right flow preference
-     // If x2 < x1 (backwards), curve goes up/down more
      return `M ${x1} ${y1} C ${x1 + controlDist} ${y1}, ${x2 - controlDist} ${y2}, ${x2} ${y2}`;
   };
 
@@ -367,9 +467,7 @@ export const ProjectView: React.FC<ProjectViewProps> = ({
         <div>
             <h1 className="text-3xl font-bold text-slate-900">Flowsheet Designer</h1>
             <p className="text-slate-500">
-                {tool === 'connection' 
-                  ? "Draw Mode: Drag on canvas or between ports to connect." 
-                  : "Select Mode: Move equipment or delete items."}
+                Right-click equipment or lines to edit/delete. Drag to move. Use "Linha" tool to connect.
             </p>
         </div>
         <div className="flex space-x-2">
@@ -382,7 +480,7 @@ export const ProjectView: React.FC<ProjectViewProps> = ({
         </div>
       </header>
 
-      <div className="flex-1 flex bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden select-none">
+      <div className="flex-1 flex bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden select-none relative">
         
         {/* Sidebar / Toolbox */}
         <div className="w-64 bg-slate-50 border-r border-slate-200 flex flex-col z-20">
@@ -405,14 +503,6 @@ export const ProjectView: React.FC<ProjectViewProps> = ({
                     <span className="ml-2 text-sm font-medium">Linha</span>
                 </button>
             </div>
-            {(selectedNode || selectedConnection) && (
-                <button 
-                    onClick={deleteSelected}
-                    className="w-full mt-2 p-2 rounded-lg flex items-center justify-center bg-red-50 text-red-600 border border-red-100 hover:bg-red-100 transition-colors"
-                >
-                    <Trash2 className="w-4 h-4 mr-2" /> Delete Selected
-                </button>
-            )}
           </div>
 
           <div className="flex-1 p-4 overflow-y-auto">
@@ -458,15 +548,11 @@ export const ProjectView: React.FC<ProjectViewProps> = ({
                         <marker id="arrowhead" markerWidth="10" markerHeight="7" refX="9" refY="3.5" orient="auto">
                             <polygon points="0 0, 10 3.5, 0 7" fill="#64748b" />
                         </marker>
-                        <marker id="arrowhead-selected" markerWidth="10" markerHeight="7" refX="9" refY="3.5" orient="auto">
+                        <marker id="arrowhead-active" markerWidth="10" markerHeight="7" refX="9" refY="3.5" orient="auto">
                             <polygon points="0 0, 10 3.5, 0 7" fill="#2563eb" />
-                        </marker>
-                        <marker id="arrowhead-drawing" markerWidth="10" markerHeight="7" refX="9" refY="3.5" orient="auto">
-                            <polygon points="0 0, 10 3.5, 0 7" fill="#3b82f6" />
                         </marker>
                     </defs>
 
-                    {/* Render Saved Connections */}
                     {connections.map(conn => {
                         let start = { x: 0, y: 0 };
                         let end = { x: 0, y: 0 };
@@ -489,24 +575,29 @@ export const ProjectView: React.FC<ProjectViewProps> = ({
                         
                         if ((start.x === 0 && start.y === 0) || (end.x === 0 && end.y === 0)) return null;
                         
-                        const isSelected = selectedConnection === conn.id;
+                        const isActive = activeItem?.id === conn.id;
 
                         return (
-                            <g key={conn.id} onClick={(e) => { e.stopPropagation(); setSelectedConnection(conn.id); }} className="pointer-events-auto cursor-pointer">
-                                {/* Wider transparent path for easier clicking */}
-                                <path d={getPath(start.x, start.y, end.x, end.y)} stroke="transparent" strokeWidth="20" fill="none" />
+                            <g 
+                                key={conn.id} 
+                                onContextMenu={(e) => handleConnectionContextMenu(e, conn)} 
+                                className="pointer-events-auto cursor-pointer group"
+                            >
+                                {/* Fat transparent path for hit detection */}
+                                <path d={getPath(start.x, start.y, end.x, end.y)} stroke="transparent" strokeWidth="25" fill="none" />
+                                {/* Visible Path */}
                                 <path 
                                     d={getPath(start.x, start.y, end.x, end.y)} 
-                                    stroke={isSelected ? "#2563eb" : "#64748b"} 
-                                    strokeWidth={isSelected ? "3" : "2"} 
+                                    stroke={isActive ? "#2563eb" : "#64748b"} 
+                                    strokeWidth={isActive ? "3" : "2"} 
                                     fill="none"
-                                    markerEnd={isSelected ? "url(#arrowhead-selected)" : "url(#arrowhead)"}
+                                    markerEnd={isActive ? "url(#arrowhead-active)" : "url(#arrowhead)"}
+                                    className="transition-all group-hover:stroke-slate-600"
                                 />
                             </g>
                         );
                     })}
 
-                    {/* Render Active Drawing Line */}
                     {drawingLine && (
                         <path 
                             d={getPath(drawingLine.startX, drawingLine.startY, drawingLine.currX, drawingLine.currY)}
@@ -514,7 +605,7 @@ export const ProjectView: React.FC<ProjectViewProps> = ({
                             strokeWidth="2"
                             strokeDasharray="5,5"
                             fill="none"
-                            markerEnd="url(#arrowhead-drawing)"
+                            markerEnd="url(#arrowhead-active)"
                             pointerEvents="none" 
                         />
                     )}
@@ -523,12 +614,13 @@ export const ProjectView: React.FC<ProjectViewProps> = ({
                 {/* Render Nodes */}
                 {nodes.map((node) => {
                     const config = EQUIPMENT_CONFIGS[node.type];
-                    const isSelected = selectedNode === node.id;
+                    const isActive = activeItem?.id === node.id;
                     
                     return (
                         <div
                             key={node.id}
                             onMouseDown={(e) => handleNodeMouseDown(e, node.id)}
+                            onContextMenu={(e) => handleNodeContextMenu(e, node.id)}
                             style={{ 
                                 left: node.x, 
                                 top: node.y,
@@ -537,9 +629,9 @@ export const ProjectView: React.FC<ProjectViewProps> = ({
                                 position: 'absolute',
                             }}
                             className={`
-                                group rounded-lg border-2 bg-white shadow-sm transition-all z-10 flex flex-col
+                                group rounded-lg border-2 bg-white shadow-sm transition-all z-10 flex flex-col cursor-pointer
                                 ${config.color}
-                                ${isSelected ? 'ring-2 ring-blue-500 shadow-lg scale-105 z-20' : 'hover:shadow-md'}
+                                ${isActive ? 'ring-2 ring-blue-500 shadow-lg scale-105 z-20' : 'hover:shadow-md'}
                             `}
                         >
                             {/* Header */}
@@ -550,7 +642,6 @@ export const ProjectView: React.FC<ProjectViewProps> = ({
                             
                             {/* Body */}
                             <div className="flex-1 relative">
-                                {/* Input Ports (Left) */}
                                 {config.inputs.map((port, idx) => {
                                     const total = config.inputs.length;
                                     const topPos = ((idx + 1) * (100 / (total + 1))) + '%';
@@ -568,7 +659,6 @@ export const ProjectView: React.FC<ProjectViewProps> = ({
                                     );
                                 })}
 
-                                {/* Output Ports (Right) */}
                                 {config.outputs.map((port, idx) => {
                                     const total = config.outputs.length;
                                     const topPos = ((idx + 1) * (100 / (total + 1))) + '%';
@@ -589,9 +679,103 @@ export const ProjectView: React.FC<ProjectViewProps> = ({
                         </div>
                     );
                 })}
+                
+                {/* Context Menu (Popup) */}
+                {activeItem && !draggingNode && (
+                   <div 
+                      className="absolute z-50 bg-white rounded-lg shadow-xl border border-slate-200 p-1 flex flex-col min-w-[120px] animate-in fade-in zoom-in-95 duration-100 origin-top-left"
+                      style={{ left: activeItem.x + 10, top: activeItem.y }}
+                   >
+                      <button 
+                        onClick={handleEditActive}
+                        className="flex items-center px-3 py-2 text-sm text-slate-700 hover:bg-blue-50 hover:text-blue-700 rounded-md transition-colors text-left"
+                      >
+                        <Edit className="w-4 h-4 mr-2" />
+                        Edit
+                      </button>
+                      <button 
+                        onClick={handleDeleteActive}
+                        className="flex items-center px-3 py-2 text-sm text-red-600 hover:bg-red-50 rounded-md transition-colors text-left"
+                      >
+                        <Trash2 className="w-4 h-4 mr-2" />
+                        Delete
+                      </button>
+                   </div>
+                )}
             </div>
         </div>
       </div>
+
+      {/* --- Edit Modal (Suspended Screen) --- */}
+      {editModalOpen && activeItem && (
+          <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm animate-in fade-in duration-200">
+              <div className="bg-white rounded-xl shadow-2xl w-full max-w-lg mx-4 overflow-hidden animate-in zoom-in-95 slide-in-from-bottom-4 duration-200">
+                  <div className="flex items-center justify-between p-6 border-b border-slate-100">
+                      <div className="flex items-center">
+                          <div className="p-2 bg-blue-100 rounded-lg mr-3">
+                              {activeItem.type === 'node' 
+                                ? <Settings2 className="w-5 h-5 text-blue-600" /> 
+                                : <ArrowUpRight className="w-5 h-5 text-blue-600" />
+                              }
+                          </div>
+                          <div>
+                              <h3 className="font-bold text-xl text-slate-900">
+                                  Edit {activeItem.type === 'node' ? activeItem.data.label : 'Connection'}
+                              </h3>
+                              <p className="text-sm text-slate-500">Configure simulation parameters</p>
+                          </div>
+                      </div>
+                      <button onClick={() => setEditModalOpen(false)} className="text-slate-400 hover:text-slate-600">
+                          <X className="w-6 h-6" />
+                      </button>
+                  </div>
+                  
+                  <div className="p-6 max-h-[60vh] overflow-y-auto">
+                      <div className="space-y-4">
+                          {Object.keys(editFormData).length > 0 ? (
+                             Object.entries(editFormData).map(([key, value]) => (
+                                <div key={key}>
+                                    <label className="block text-sm font-medium text-slate-700 mb-1 capitalize">
+                                        {key.replace(/([A-Z])/g, ' $1').trim()}
+                                    </label>
+                                    <input 
+                                        type={typeof value === 'number' ? 'number' : 'text'}
+                                        value={value}
+                                        onChange={(e) => setEditFormData(prev => ({
+                                            ...prev,
+                                            [key]: typeof value === 'number' ? parseFloat(e.target.value) : e.target.value
+                                        }))}
+                                        className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none transition-all"
+                                    />
+                                </div>
+                             ))
+                          ) : (
+                              <div className="text-center py-8 text-slate-500 border-2 border-dashed border-slate-200 rounded-lg">
+                                  <MoreHorizontal className="w-8 h-8 mx-auto mb-2 opacity-50" />
+                                  <p>No configurable parameters available for this item.</p>
+                              </div>
+                          )}
+                      </div>
+                  </div>
+
+                  <div className="p-6 bg-slate-50 border-t border-slate-100 flex justify-end space-x-3">
+                      <button 
+                        onClick={() => setEditModalOpen(false)}
+                        className="px-4 py-2 text-slate-600 hover:text-slate-800 font-medium"
+                      >
+                          Cancel
+                      </button>
+                      <button 
+                        onClick={handleSaveEdit}
+                        className="px-6 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg font-bold shadow-sm flex items-center transition-colors"
+                      >
+                          <Check className="w-4 h-4 mr-2" />
+                          Save Changes
+                      </button>
+                  </div>
+              </div>
+          </div>
+      )}
 
       {/* Clear Confirmation Modal */}
       {showClearModal && (

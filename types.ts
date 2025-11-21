@@ -1,3 +1,4 @@
+
 export enum EquipmentType {
   DASHBOARD = 'DASHBOARD',
   PROJECT = 'PROJECT',
@@ -53,6 +54,7 @@ export interface EquipmentConfig {
   color: string;
   inputs: Port[];
   outputs: Port[];
+  defaultParameters?: Record<string, any>; // Default simulation values
 }
 
 export interface NodeData {
@@ -61,6 +63,7 @@ export interface NodeData {
   x: number;
   y: number;
   label: string;
+  parameters?: Record<string, any>; // User configured parameters
 }
 
 export interface Connection {
@@ -73,4 +76,5 @@ export interface Connection {
   toPort?: string;   // Optional
   toX?: number;      // Used if toNode is undefined
   toY?: number;      // Used if toNode is undefined
+  parameters?: Record<string, any>; // Stream constraints or properties
 }
