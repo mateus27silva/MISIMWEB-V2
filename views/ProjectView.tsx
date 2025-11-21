@@ -399,11 +399,12 @@ export const ProjectView: React.FC<ProjectViewProps> = ({
 
   const handleDeleteActive = () => {
     if (!activeItem) return;
+    
     if (activeItem.type === 'node') {
-      setNodes(nodes.filter(n => n.id !== activeItem.id));
-      setConnections(connections.filter(c => c.fromNode !== activeItem.id && c.toNode !== activeItem.id));
+      setNodes(prev => prev.filter(n => n.id !== activeItem.id));
+      setConnections(prev => prev.filter(c => c.fromNode !== activeItem.id && c.toNode !== activeItem.id));
     } else {
-      setConnections(connections.filter(c => c.id !== activeItem.id));
+      setConnections(prev => prev.filter(c => c.id !== activeItem.id));
     }
     setActiveItem(null);
   };
@@ -685,6 +686,7 @@ export const ProjectView: React.FC<ProjectViewProps> = ({
                    <div 
                       className="absolute z-50 bg-white rounded-lg shadow-xl border border-slate-200 p-1 flex flex-col min-w-[120px] animate-in fade-in zoom-in-95 duration-100 origin-top-left"
                       style={{ left: activeItem.x + 10, top: activeItem.y }}
+                      onMouseDown={(e) => e.stopPropagation()}
                    >
                       <button 
                         onClick={handleEditActive}
