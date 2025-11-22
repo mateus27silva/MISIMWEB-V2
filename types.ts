@@ -135,6 +135,7 @@ export interface NodeData {
 
 export interface Connection {
   id: string;
+  label?: string; // User defined name for the stream
   fromNode?: string; 
   fromPort?: string; 
   fromX?: number;    

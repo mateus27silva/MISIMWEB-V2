@@ -1,3 +1,5 @@
+
+
 import React, { useState } from 'react';
 import { Layout } from './components/Layout';
 import { EquipmentType, NodeData, Connection } from './types';
@@ -6,7 +8,9 @@ import { AuthView } from './views/AuthView';
 import { AdminView } from './views/AdminView';
 import { LandingPage } from './views/LandingPage';
 import { ProjectView } from './views/ProjectView';
+import { ResultsView } from './views/ResultsView';
 import { Construction } from 'lucide-react';
+import { SimulationResult } from './services/flowsheetSolver';
 
 interface User {
   email: string;
@@ -35,6 +39,9 @@ const App: React.FC = () => {
   // --- Persistent State for Project Flowsheet ---
   const [projectNodes, setProjectNodes] = useState<NodeData[]>([]);
   const [projectConnections, setProjectConnections] = useState<Connection[]>([]);
+  
+  // --- Simulation Results State ---
+  const [simulationResult, setSimulationResult] = useState<SimulationResult | null>(null);
 
   const handleLogin = (email: string, isAdmin: boolean) => {
     setUser({ email, isAdmin });
@@ -58,6 +65,13 @@ const App: React.FC = () => {
       setShowAuth(false);
   };
 
+  const handleSimulationComplete = (results: SimulationResult) => {
+      setSimulationResult(results);
+      // Optional: Automatically navigate to results?
+      // setCurrentView(EquipmentType.RESULTS); 
+      // For now, we keep the user in Project View but data is ready.
+  };
+
   const renderView = () => {
     switch (currentView) {
       case EquipmentType.PROJECT:
@@ -67,12 +81,20 @@ const App: React.FC = () => {
             setNodes={setProjectNodes}
             connections={projectConnections}
             setConnections={setProjectConnections}
+            onSimulationComplete={handleSimulationComplete}
+            onNavigateToResults={() => setCurrentView(EquipmentType.RESULTS)}
           />
         );
       case EquipmentType.PARAMETERS:
         return <PlaceholderView title="Parâmetros de Simulação" description="Configuração detalhada de variáveis de processo, constantes de minério e setpoints operacionais." />;
       case EquipmentType.RESULTS:
-        return <PlaceholderView title="Resultados Detalhados" description="Tabelas de balanço de massa, granulometria e KPIs de performance." />;
+        return (
+          <ResultsView 
+            results={simulationResult} 
+            connections={projectConnections}
+            onNavigate={setCurrentView}
+          />
+        );
       case EquipmentType.ECONOMICS:
         return <PlaceholderView title="Análise Econômica" description="Estimativas de OPEX, CAPEX e análise de viabilidade financeira do projeto." />;
       case EquipmentType.CHARTS:
