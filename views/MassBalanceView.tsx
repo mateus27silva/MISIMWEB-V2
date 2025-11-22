@@ -11,11 +11,31 @@ export const MassBalanceView: React.FC = () => {
   // Simple separation logic for demo
   const [recovery, setRecovery] = useState(95); // % Recovery to product
 
-  const feedStream: StreamData = calculateStreamProperties(feedTph, feedSolids, sg);
+  const feedStreamPart = calculateStreamProperties(feedTph, feedSolids, sg);
+  const feedStream: StreamData = {
+    totalTph: feedStreamPart.totalTph || 0,
+    solidsTph: feedStreamPart.solidsTph || 0,
+    waterTph: feedStreamPart.waterTph || 0,
+    percentSolids: feedStreamPart.percentSolids || 0,
+    slurryDensity: feedStreamPart.slurryDensity || 0,
+    sgSolids: feedStreamPart.sgSolids || sg,
+    mineralFlows: {},
+    elementalAssays: {}
+  };
   
   const concTph = feedTph * (recovery / 100);
   const concSolids = 60; // Assumed for demo
-  const concStream: StreamData = calculateStreamProperties(concTph, concSolids, sg);
+  const concStreamPart = calculateStreamProperties(concTph, concSolids, sg);
+  const concStream: StreamData = {
+    totalTph: concStreamPart.totalTph || 0,
+    solidsTph: concStreamPart.solidsTph || 0,
+    waterTph: concStreamPart.waterTph || 0,
+    percentSolids: concStreamPart.percentSolids || 0,
+    slurryDensity: concStreamPart.slurryDensity || 0,
+    sgSolids: concStreamPart.sgSolids || sg,
+    mineralFlows: {},
+    elementalAssays: {}
+  };
   
   const tailsTph = feedTph - concTph;
   // Water balance: Feed water = Conc water + Tails water
@@ -24,11 +44,14 @@ export const MassBalanceView: React.FC = () => {
   const tailsTotalTph = tailsTph + tailsWaterTph;
   const tailsSolids = tailsTotalTph > 0 ? (tailsTph / tailsTotalTph) * 100 : 0;
   const tailsStream: StreamData = {
-      tph: tailsTph,
+      totalTph: tailsTotalTph,
+      solidsTph: tailsTph,
       waterTph: tailsWaterTph,
       percentSolids: tailsSolids,
       slurryDensity: 100 / ((tailsSolids / sg) + ((100 - tailsSolids) / 1)),
-      sgSolids: sg
+      sgSolids: sg,
+      mineralFlows: {},
+      elementalAssays: {}
   };
 
   const StreamCard = ({ title, data, color }: { title: string, data: StreamData, color: string }) => (
@@ -37,7 +60,7 @@ export const MassBalanceView: React.FC = () => {
       <div className="space-y-3">
         <div className="flex justify-between border-b border-slate-100 pb-2">
           <span className="text-slate-500">Solids Flow</span>
-          <span className="font-semibold">{data.tph.toFixed(1)} t/h</span>
+          <span className="font-semibold">{data.solidsTph.toFixed(1)} t/h</span>
         </div>
         <div className="flex justify-between border-b border-slate-100 pb-2">
           <span className="text-slate-500">Water Flow</span>
@@ -45,7 +68,7 @@ export const MassBalanceView: React.FC = () => {
         </div>
         <div className="flex justify-between border-b border-slate-100 pb-2">
           <span className="text-slate-500">Total Mass</span>
-          <span className="font-semibold">{(data.tph + data.waterTph).toFixed(1)} t/h</span>
+          <span className="font-semibold">{data.totalTph.toFixed(1)} t/h</span>
         </div>
         <div className="flex justify-between border-b border-slate-100 pb-2">
           <span className="text-slate-500">% Solids</span>

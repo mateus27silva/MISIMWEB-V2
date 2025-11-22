@@ -10,7 +10,9 @@ export const HydrocycloneView: React.FC = () => {
     pressure: 100,
     feedDensity: 55,
     d50Req: 150,
-    numberOfCyclones: 4
+    numberOfCyclones: 4,
+    waterRecoveryToUnderflow: 40,
+    shortCircuit: 0
   });
 
   const [results, setResults] = useState<{ cutPoint: number; waterRecovery: number }>({ cutPoint: 0, waterRecovery: 0 });

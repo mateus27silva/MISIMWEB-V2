@@ -37,7 +37,7 @@ export const MineSimView: React.FC = () => {
         <h4 className="font-bold text-slate-800 mb-2">{label}</h4>
         <div className="grid grid-cols-2 gap-x-4 gap-y-1">
             <span className="text-slate-500">Solids:</span>
-            <span className="font-mono text-slate-700">{data.tph.toFixed(1)} t/h</span>
+            <span className="font-mono text-slate-700">{data.solidsTph.toFixed(1)} t/h</span>
             <span className="text-slate-500">Water:</span>
             <span className="font-mono text-slate-700">{data.waterTph.toFixed(1)} m³/h</span>
             <span className="text-slate-500">% Solids:</span>
@@ -50,10 +50,10 @@ export const MineSimView: React.FC = () => {
 
   // Prepare Chart Data
   const chartData = result ? [
-    { name: 'Fresh Feed', solids: result.streams.freshFeed.tph, water: result.streams.freshFeed.waterTph },
-    { name: 'Mill Feed', solids: result.streams.millFeed.tph, water: result.streams.millFeed.waterTph },
-    { name: 'Recycle (UF)', solids: result.streams.cycloneUnderflow.tph, water: result.streams.cycloneUnderflow.waterTph },
-    { name: 'Product (OF)', solids: result.streams.cycloneOverflow.tph, water: result.streams.cycloneOverflow.waterTph },
+    { name: 'Fresh Feed', solids: result.streams.freshFeed.solidsTph, water: result.streams.freshFeed.waterTph },
+    { name: 'Mill Feed', solids: result.streams.millFeed.solidsTph, water: result.streams.millFeed.waterTph },
+    { name: 'Recycle (UF)', solids: result.streams.cycloneUnderflow.solidsTph, water: result.streams.cycloneUnderflow.waterTph },
+    { name: 'Product (OF)', solids: result.streams.cycloneOverflow.solidsTph, water: result.streams.cycloneOverflow.waterTph },
   ] : [];
 
   return (

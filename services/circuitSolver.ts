@@ -33,12 +33,16 @@ export const solveClosedCircuit = (inputs: CircuitInputs): CircuitResult => {
   const { freshFeedTph, freshFeedSolids, workIndex, targetP80, circulatingLoadTarget, sgSolids } = inputs;
 
   // 1. Fresh Feed Stream
+  const freshFeedWater = freshFeedTph * ( (100 - freshFeedSolids) / freshFeedSolids );
   const freshFeed: StreamData = {
-    tph: freshFeedTph,
-    waterTph: freshFeedTph * ( (100 - freshFeedSolids) / freshFeedSolids ),
+    solidsTph: freshFeedTph,
+    waterTph: freshFeedWater,
+    totalTph: freshFeedTph + freshFeedWater,
     percentSolids: freshFeedSolids,
     sgSolids: sgSolids,
-    slurryDensity: 100 / ((freshFeedSolids / sgSolids) + ((100 - freshFeedSolids) / 1))
+    slurryDensity: 100 / ((freshFeedSolids / sgSolids) + ((100 - freshFeedSolids) / 1)),
+    mineralFlows: {},
+    elementalAssays: {}
   };
 
   // 2. Calculate Target Recirculation (Underflow) based on CL Ratio
@@ -50,11 +54,14 @@ export const solveClosedCircuit = (inputs: CircuitInputs): CircuitResult => {
   const underflowWaterTph = underflowTph * ( (100 - underflowSolidsPct) / underflowSolidsPct );
   
   const cycloneUnderflow: StreamData = {
-    tph: underflowTph,
+    solidsTph: underflowTph,
     waterTph: underflowWaterTph,
+    totalTph: underflowTph + underflowWaterTph,
     percentSolids: underflowSolidsPct,
     sgSolids: sgSolids,
-    slurryDensity: 100 / ((underflowSolidsPct / sgSolids) + ((100 - underflowSolidsPct) / 1))
+    slurryDensity: 100 / ((underflowSolidsPct / sgSolids) + ((100 - underflowSolidsPct) / 1)),
+    mineralFlows: {},
+    elementalAssays: {}
   };
 
   // 3. Calculate Mill Feed (Fresh + Underflow)
@@ -63,11 +70,14 @@ export const solveClosedCircuit = (inputs: CircuitInputs): CircuitResult => {
   const millFeedSolidsPct = (millFeedTph / (millFeedTph + millFeedWater)) * 100;
 
   const millFeed: StreamData = {
-    tph: millFeedTph,
+    solidsTph: millFeedTph,
     waterTph: millFeedWater,
+    totalTph: millFeedTph + millFeedWater,
     percentSolids: millFeedSolidsPct,
     sgSolids: sgSolids,
-    slurryDensity: 100 / ((millFeedSolidsPct / sgSolids) + ((100 - millFeedSolidsPct) / 1))
+    slurryDensity: 100 / ((millFeedSolidsPct / sgSolids) + ((100 - millFeedSolidsPct) / 1)),
+    mineralFlows: {},
+    elementalAssays: {}
   };
 
   // 4. Mill Discharge (Usually water is added at sump, but assuming mill discharge is same mass as feed)
@@ -77,16 +87,19 @@ export const solveClosedCircuit = (inputs: CircuitInputs): CircuitResult => {
   const cycloneFeed = { ...millDischarge };
 
   // 6. Cyclone Overflow (Product) = Cyclone Feed - Underflow
-  const overflowTph = cycloneFeed.tph - cycloneUnderflow.tph;
+  const overflowTph = cycloneFeed.solidsTph - cycloneUnderflow.solidsTph;
   const overflowWater = cycloneFeed.waterTph - cycloneUnderflow.waterTph;
   const overflowSolidsPct = (overflowTph / (overflowTph + overflowWater)) * 100;
 
   const cycloneOverflow: StreamData = {
-    tph: overflowTph,
+    solidsTph: overflowTph,
     waterTph: overflowWater,
+    totalTph: overflowTph + overflowWater,
     percentSolids: overflowSolidsPct,
     sgSolids: sgSolids,
-    slurryDensity: 100 / ((overflowSolidsPct / sgSolids) + ((100 - overflowSolidsPct) / 1))
+    slurryDensity: 100 / ((overflowSolidsPct / sgSolids) + ((100 - overflowSolidsPct) / 1)),
+    mineralFlows: {},
+    elementalAssays: {}
   };
 
   // 7. Power Calculation (Bond)
@@ -102,7 +115,8 @@ export const solveClosedCircuit = (inputs: CircuitInputs): CircuitResult => {
     productSizeP80: targetP80,
     millDiameter: 5, 
     millLength: 7, 
-    fillingDegree: 35 
+    fillingDegree: 35,
+    dischargeSolidsTarget: 70
   });
 
   // Adjustment factor for efficiency of closed circuit (simulated)

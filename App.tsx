@@ -52,6 +52,12 @@ const App: React.FC = () => {
     setShowAuth(true);
   };
 
+  // Atalho para login de administrador (Dev Mode)
+  const handleAdminShortcut = () => {
+      setUser({ email: 'eng.mateusgsilva@gmail.com', isAdmin: true });
+      setShowAuth(false);
+  };
+
   const renderView = () => {
     switch (currentView) {
       case EquipmentType.PROJECT:
@@ -112,7 +118,7 @@ const App: React.FC = () => {
   }
 
   // 3. Default: Show Landing Page
-  return <LandingPage onNavigateToAuth={navigateToAuth} />;
+  return <LandingPage onNavigateToAuth={navigateToAuth} onAdminShortcut={handleAdminShortcut} />;
 };
 
 export default App;

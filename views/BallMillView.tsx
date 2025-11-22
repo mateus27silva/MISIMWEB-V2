@@ -13,7 +13,8 @@ export const BallMillView: React.FC = () => {
     productSizeP80: 105,
     millDiameter: 4.5,
     millLength: 6.0,
-    fillingDegree: 35
+    fillingDegree: 35,
+    dischargeSolidsTarget: 70
   });
 
   const [results, setResults] = useState<{ specificEnergy: number; totalPower: number }>({ specificEnergy: 0, totalPower: 0 });

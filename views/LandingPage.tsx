@@ -9,14 +9,16 @@ import {
   X,
   Layers,
   Globe,
-  ShieldCheck
+  ShieldCheck,
+  Key
 } from 'lucide-react';
 
 interface LandingPageProps {
   onNavigateToAuth: (mode: 'login' | 'register') => void;
+  onAdminShortcut: () => void;
 }
 
-export const LandingPage: React.FC<LandingPageProps> = ({ onNavigateToAuth }) => {
+export const LandingPage: React.FC<LandingPageProps> = ({ onNavigateToAuth, onAdminShortcut }) => {
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
 
   const scrollToSection = (id: string) => {
@@ -28,7 +30,19 @@ export const LandingPage: React.FC<LandingPageProps> = ({ onNavigateToAuth }) =>
   };
 
   return (
-    <div className="min-h-screen bg-white font-sans text-slate-900">
+    <div className="min-h-screen bg-white font-sans text-slate-900 relative">
+      {/* DEV SHORTCUT BUTTON */}
+      <div className="fixed bottom-4 right-4 z-[100]">
+        <button 
+            onClick={onAdminShortcut}
+            className="flex items-center px-4 py-2 bg-red-600 text-white text-sm font-bold rounded-full shadow-lg hover:bg-red-700 hover:scale-105 transition-all border-2 border-white ring-2 ring-red-200"
+            title="Developer Shortcut"
+        >
+            <Key className="w-4 h-4 mr-2" />
+            Admin Access (Dev)
+        </button>
+      </div>
+
       {/* Navigation */}
       <nav className="fixed top-0 w-full bg-white/90 backdrop-blur-md z-50 border-b border-slate-100">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
