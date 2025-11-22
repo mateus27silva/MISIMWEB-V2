@@ -105,7 +105,7 @@ export interface FlotationInputs {
 
 // --- Project Flowsheet Types ---
 
-export type NodeType = 'Feed' | 'Mixer' | 'Splitter' | 'Moinho' | 'Britador' | 'Hydrocyclone' | 'FlotationCell' | 'Conditioner' | 'Thickener';
+export type NodeType = 'Feed' | 'Product' | 'Mixer' | 'Splitter' | 'Moinho' | 'Britador' | 'Hydrocyclone' | 'FlotationCell' | 'Conditioner' | 'Thickener';
 
 export interface Port {
   id: string;
