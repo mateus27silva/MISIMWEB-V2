@@ -140,7 +140,7 @@ export const ResultsView: React.FC<ResultsViewProps> = ({ results, connections, 
         {hasMinerals && (
             <div className="p-4 bg-slate-50 text-xs text-slate-500 flex items-center border-t border-slate-200">
                 <Beaker className="w-4 h-4 mr-2 text-purple-500" />
-                As colunas em roxo indicam a composição mineralógica definida pelo usuário na etapa de configuração.
+                As colunas em roxo indicam a composição mineralógica calculada para cada corrente.
             </div>
         )}
       </div>

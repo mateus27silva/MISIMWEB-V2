@@ -565,8 +565,32 @@ export const ProjectView: React.FC<ProjectViewProps> = ({
         else data = connections.find(c => c.id === target.id);
     }
 
+    // Populate Form Data (with potential simulation results)
+    let formData = { ...(data?.parameters || {}) };
+
+    // If this connection has calculation results, pre-fill the fields for display
+    // This addresses the user request to "complement information of subsequent streams"
+    if (target.type === 'connection' && data?.streamState) {
+        const s = data.streamState as StreamData;
+        
+        // Fill basic props
+        if (s.solidsTph !== undefined) formData.solidsTph = s.solidsTph.toFixed(2);
+        if (s.percentSolids !== undefined) formData.percentSolids = s.percentSolids.toFixed(2);
+        if (s.totalTph !== undefined && s.slurryDensity > 0) {
+             formData.volumetricFlow = (s.totalTph / s.slurryDensity).toFixed(2);
+        }
+
+        // Fill minerals (Convert Mass back to %)
+        if (s.mineralFlows && s.solidsTph > 0) {
+             Object.entries(s.mineralFlows).forEach(([minId, mass]) => {
+                 const pct = (mass / s.solidsTph) * 100;
+                 formData[`mineral_${minId}`] = pct.toFixed(2);
+             });
+        }
+    }
+
     setActiveItem({ id: target.id, type: target.type as 'node'|'connection', x: 0, y: 0, data });
-    setEditFormData(data?.parameters || {});
+    setEditFormData(formData);
     setEditLabel(target.type === 'connection' ? (data.label || '') : (data.label || ''));
     setEditModalOpen(true);
     setContextMenu(null);
