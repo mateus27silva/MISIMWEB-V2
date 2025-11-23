@@ -46,7 +46,11 @@ import {
   CheckCircle,
   Calculator,
   Menu,
-  Tag
+  Tag,
+  FlaskConical,
+  Atom,
+  Square,
+  CheckSquare2
 } from 'lucide-react';
 import { 
   NodeType, 
@@ -60,16 +64,16 @@ import { solveFlowsheet, SimulationResult } from '../services/flowsheetSolver';
 
 // --- Mock Database (Extended Webmineral.com Data) ---
 const WEBMINERAL_DB: Mineral[] = [
-  { id: '1', name: 'Quartz', formula: 'SiO2', density: 2.65, abrasionIndex: 0.75, workIndex: 13.5, class: 'Silicate', molecularWeight: 60.08, elementalComposition: 'Si: 46.74%, O: 53.26%', color: 'Colorless, White', luster: 'Vitreous' },
-  { id: '2', name: 'Hematite', formula: 'Fe2O3', density: 5.26, abrasionIndex: 0.30, workIndex: 12.8, class: 'Oxide', molecularWeight: 159.69, elementalComposition: 'Fe: 69.94%, O: 30.06%', color: 'Steel grey, Reddish brown', luster: 'Metallic' },
-  { id: '3', name: 'Magnetite', formula: 'Fe3O4', density: 5.18, abrasionIndex: 0.25, workIndex: 10.0, class: 'Oxide', molecularWeight: 231.53, elementalComposition: 'Fe: 72.36%, O: 27.64%', color: 'Iron black', luster: 'Metallic' },
-  { id: '5', name: 'Pyrite', formula: 'FeS2', density: 5.01, abrasionIndex: 0.45, workIndex: 14.0, class: 'Sulfide', molecularWeight: 119.98, elementalComposition: 'Fe: 46.55%, S: 53.45%', color: 'Pale brass yellow', luster: 'Metallic' },
-  { id: '6', name: 'Chalcopyrite', formula: 'CuFeS2', density: 4.2, abrasionIndex: 0.12, workIndex: 10.5, class: 'Sulfide', molecularWeight: 183.53, elementalComposition: 'Cu: 34.63%, Fe: 30.43%, S: 34.94%', color: 'Brass yellow', luster: 'Metallic' },
-  { id: '7', name: 'Bornite', formula: 'Cu5FeS4', density: 5.06, abrasionIndex: 0.10, workIndex: 9.0, class: 'Sulfide', molecularWeight: 501.84, elementalComposition: 'Cu: 63.31%, Fe: 11.13%, S: 25.56%', color: 'Copper red', luster: 'Metallic' },
-  { id: '10', name: 'Galena', formula: 'PbS', density: 7.58, abrasionIndex: 0.05, workIndex: 8.5, class: 'Sulfide', molecularWeight: 239.27, elementalComposition: 'Pb: 86.60%, S: 13.40%', color: 'Lead grey', luster: 'Metallic' },
-  { id: '11', name: 'Sphalerite', formula: 'ZnS', density: 4.0, abrasionIndex: 0.18, workIndex: 11.5, class: 'Sulfide', molecularWeight: 97.47, elementalComposition: 'Zn: 67.09%, S: 32.90%', color: 'Yellow, Brown, Black', luster: 'Resinous' },
-  { id: '12', name: 'Calcite', formula: 'CaCO3', density: 2.71, abrasionIndex: 0.02, workIndex: 5.0, class: 'Carbonate', molecularWeight: 100.09, elementalComposition: 'Ca: 40.04%, C: 12.00%, O: 47.96%', color: 'White, Colorless', luster: 'Vitreous' },
-  { id: '20', name: 'Gold', formula: 'Au', density: 19.3, abrasionIndex: 0.01, workIndex: 6.0, class: 'Native Element', molecularWeight: 196.97, elementalComposition: 'Au: 100.00%', color: 'Gold yellow', luster: 'Metallic' },
+  { id: '1', name: 'Quartz', formula: 'SiO2', density: 2.65, abrasionIndex: 0.75, workIndex: 13.5, class: 'Silicate', molecularWeight: 60.08, elementalComposition: 'Si: 46.74%, O: 53.26%', color: 'Colorless, White', luster: 'Vitreous', selected: true },
+  { id: '2', name: 'Hematite', formula: 'Fe2O3', density: 5.26, abrasionIndex: 0.30, workIndex: 12.8, class: 'Oxide', molecularWeight: 159.69, elementalComposition: 'Fe: 69.94%, O: 30.06%', color: 'Steel grey, Reddish brown', luster: 'Metallic', selected: false },
+  { id: '3', name: 'Magnetite', formula: 'Fe3O4', density: 5.18, abrasionIndex: 0.25, workIndex: 10.0, class: 'Oxide', molecularWeight: 231.53, elementalComposition: 'Fe: 72.36%, O: 27.64%', color: 'Iron black', luster: 'Metallic', selected: false },
+  { id: '5', name: 'Pyrite', formula: 'FeS2', density: 5.01, abrasionIndex: 0.45, workIndex: 14.0, class: 'Sulfide', molecularWeight: 119.98, elementalComposition: 'Fe: 46.55%, S: 53.45%', color: 'Pale brass yellow', luster: 'Metallic', selected: true },
+  { id: '6', name: 'Chalcopyrite', formula: 'CuFeS2', density: 4.2, abrasionIndex: 0.12, workIndex: 10.5, class: 'Sulfide', molecularWeight: 183.53, elementalComposition: 'Cu: 34.63%, Fe: 30.43%, S: 34.94%', color: 'Brass yellow', luster: 'Metallic', selected: true },
+  { id: '7', name: 'Bornite', formula: 'Cu5FeS4', density: 5.06, abrasionIndex: 0.10, workIndex: 9.0, class: 'Sulfide', molecularWeight: 501.84, elementalComposition: 'Cu: 63.31%, Fe: 11.13%, S: 25.56%', color: 'Copper red', luster: 'Metallic', selected: false },
+  { id: '10', name: 'Galena', formula: 'PbS', density: 7.58, abrasionIndex: 0.05, workIndex: 8.5, class: 'Sulfide', molecularWeight: 239.27, elementalComposition: 'Pb: 86.60%, S: 13.40%', color: 'Lead grey', luster: 'Metallic', selected: false },
+  { id: '11', name: 'Sphalerite', formula: 'ZnS', density: 4.0, abrasionIndex: 0.18, workIndex: 11.5, class: 'Sulfide', molecularWeight: 97.47, elementalComposition: 'Zn: 67.09%, S: 32.90%', color: 'Yellow, Brown, Black', luster: 'Resinous', selected: false },
+  { id: '12', name: 'Calcite', formula: 'CaCO3', density: 2.71, abrasionIndex: 0.02, workIndex: 5.0, class: 'Carbonate', molecularWeight: 100.09, elementalComposition: 'Ca: 40.04%, C: 12.00%, O: 47.96%', color: 'White, Colorless', luster: 'Vitreous', selected: false },
+  { id: '20', name: 'Gold', formula: 'Au', density: 19.3, abrasionIndex: 0.01, workIndex: 6.0, class: 'Native Element', molecularWeight: 196.97, elementalComposition: 'Au: 100.00%', color: 'Gold yellow', luster: 'Metallic', selected: true },
 ];
 
 interface ProjectViewProps {
@@ -90,10 +94,6 @@ const EQUIPMENT_CONFIGS: Record<NodeType, EquipmentConfig> = {
         solidsTph: 100, 
         percentSolids: 60, 
         sg: 2.7, 
-        assay_Cu: 1.5,
-        assay_Fe: 5.0,
-        assay_Au: 0.5,
-        assay_S: 2.0,
         description: 'Fresh Feed' 
     }
   },
@@ -198,8 +198,10 @@ export const ProjectView: React.FC<ProjectViewProps> = ({
   // Mineral State
   const [showMineralModal, setShowMineralModal] = useState(false);
   const [minerals, setMinerals] = useState<Mineral[]>(WEBMINERAL_DB);
-  const [selectedMinerals, setSelectedMinerals] = useState<string[]>(['1', '2', '3', '6']); 
   const [mineralSearch, setMineralSearch] = useState('');
+  const [mineralViewMode, setMineralViewMode] = useState<'list' | 'edit'>('list');
+  const [currentMineral, setCurrentMineral] = useState<Partial<Mineral>>({});
+
   const canvasRef = useRef<HTMLDivElement>(null);
 
   // Close context menu on global click
@@ -209,6 +211,55 @@ export const ProjectView: React.FC<ProjectViewProps> = ({
     return () => document.removeEventListener('click', handleClick);
   }, []);
 
+  // --- Mineral CRUD Logic ---
+  const handleEditMineral = (mineral: Mineral) => {
+    setCurrentMineral({ ...mineral });
+    setMineralViewMode('edit');
+  };
+
+  const handleToggleSelection = (id: string) => {
+    setMinerals(prev => prev.map(m => m.id === id ? { ...m, selected: !m.selected } : m));
+  };
+
+  const handleCreateMineral = () => {
+    setCurrentMineral({ 
+      id: `custom_${Date.now()}`,
+      name: 'New Mineral',
+      formula: '',
+      density: 2.7,
+      class: 'Silicate',
+      elementalComposition: '',
+      workIndex: 10,
+      selected: true
+    });
+    setMineralViewMode('edit');
+  };
+
+  const handleSaveMineral = () => {
+    if (!currentMineral.name || !currentMineral.id) return;
+    
+    setMinerals(prev => {
+      const exists = prev.find(m => m.id === currentMineral.id);
+      if (exists) {
+        return prev.map(m => m.id === currentMineral.id ? currentMineral as Mineral : m);
+      } else {
+        return [...prev, currentMineral as Mineral];
+      }
+    });
+    setMineralViewMode('list');
+  };
+
+  const handleDeleteMineral = (id: string) => {
+    if (confirm('Tem certeza que deseja remover este mineral da base de dados?')) {
+      setMinerals(prev => prev.filter(m => m.id !== id));
+    }
+  };
+
+  const filteredMinerals = minerals.filter(m => 
+    m.name.toLowerCase().includes(mineralSearch.toLowerCase()) || 
+    m.formula.toLowerCase().includes(mineralSearch.toLowerCase())
+  );
+
   // --- Simulation Logic ---
   const handleRunSimulation = () => {
       setSimState('running');
@@ -216,9 +267,18 @@ export const ProjectView: React.FC<ProjectViewProps> = ({
       
       setTimeout(() => {
           try {
-              const result = solveFlowsheet(nodes, connections);
+              // Pass minerals DB to solver so it can calculate assays from mineral grades
+              const result = solveFlowsheet(nodes, connections, minerals);
               
-              // Update connections state to reflect calculated streams
+              if (result.diagnostics.length > 0) {
+                 setSimState('idle');
+                 setDiagnostics(result.diagnostics);
+                 
+                 if (!result.converged && result.error === 100) {
+                     return; 
+                 }
+              }
+
               const updatedConnections = connections.map(c => ({
                   ...c,
                   streamState: result.streams[c.id]
@@ -229,10 +289,9 @@ export const ProjectView: React.FC<ProjectViewProps> = ({
 
               if (result.converged && result.error < 1) {
                   setSimState('success');
-                  setTimeout(() => setSimState('idle'), 3000);
+                  setTimeout(() => setSimState('idle'), 5000); 
               } else {
                   setSimState('idle');
-                  setDiagnostics(result.diagnostics.length > 0 ? result.diagnostics : ['Simulação não convergiu (Erro > 1%). Verifique reciclos.']);
               }
 
           } catch (e) {
@@ -479,16 +538,12 @@ export const ProjectView: React.FC<ProjectViewProps> = ({
   const handleContextMenu = (e: React.MouseEvent, type: 'node' | 'connection', id: string) => {
       e.preventDefault();
       e.stopPropagation();
-      
-      // Use fixed positioning based on client coordinates to avoid scroll issues
       setContextMenu({
           x: e.clientX,
           y: e.clientY,
           type,
           id
       });
-      
-      // Optionally highlight item
       const item = type === 'node' 
           ? nodes.find(n => n.id === id) 
           : connections.find(c => c.id === id);
@@ -549,7 +604,7 @@ export const ProjectView: React.FC<ProjectViewProps> = ({
                 <PanelLeft className="w-5 h-5" />
             </button>
             <div className="h-6 w-px bg-slate-200 mx-2"></div>
-            <button onClick={() => { setShowMineralModal(true); setMineralSearch(''); }} className="px-3 py-2 bg-white border border-slate-200 rounded-lg flex items-center text-sm font-medium text-slate-700 hover:bg-slate-50 hover:border-purple-300 transition-all">
+            <button onClick={() => { setShowMineralModal(true); setMineralSearch(''); setMineralViewMode('list'); }} className="px-3 py-2 bg-white border border-slate-200 rounded-lg flex items-center text-sm font-medium text-slate-700 hover:bg-slate-50 hover:border-purple-300 transition-all">
                 <Beaker className="w-4 h-4 mr-2 text-purple-600" /> Components
             </button>
             <div className="h-6 w-px bg-slate-200 mx-2"></div>
@@ -670,7 +725,10 @@ export const ProjectView: React.FC<ProjectViewProps> = ({
                                 
                                 {/* Label Tag */}
                                 <foreignObject x={labelX - 40} y={labelY - 12} width="80" height="24" style={{ overflow: 'visible' }}>
-                                    <div className={`flex items-center justify-center px-2 py-0.5 rounded-full text-[10px] font-bold border shadow-sm transition-all whitespace-nowrap ${isActive ? 'bg-blue-600 text-white border-blue-700' : 'bg-white text-slate-600 border-slate-200 hover:border-slate-400'}`}>
+                                    <div 
+                                        onClick={(e) => {e.stopPropagation(); handleOpenEditModal({ id: conn.id, type: 'connection', data: conn });}}
+                                        className={`flex items-center justify-center px-2 py-0.5 rounded-full text-[10px] font-bold border shadow-sm transition-all whitespace-nowrap cursor-pointer hover:scale-110 ${isActive ? 'bg-blue-600 text-white border-blue-700' : 'bg-white text-slate-600 border-slate-200 hover:border-slate-400'}`}
+                                    >
                                         {conn.label || 'Stream'}
                                     </div>
                                 </foreignObject>
@@ -777,20 +835,161 @@ export const ProjectView: React.FC<ProjectViewProps> = ({
         )}
       </div>
 
-      {/* Modals */}
+      {/* Mineral Database Modal */}
       {showMineralModal && (
          <div className="fixed inset-0 z-[60] flex items-center justify-center bg-black/60 backdrop-blur-sm">
-            <div className="bg-white rounded-xl shadow-2xl w-full max-w-4xl mx-4 flex flex-col h-[85vh]">
-                <div className="p-6 border-b border-slate-100 flex items-center justify-between shrink-0">
+            <div className="bg-white rounded-xl shadow-2xl w-full max-w-5xl mx-4 flex flex-col h-[85vh] animate-in zoom-in-95 duration-200">
+                <div className="p-6 border-b border-slate-100 flex items-center justify-between shrink-0 bg-slate-50 rounded-t-xl">
                     <div className="flex items-center">
                         <div className="p-2 bg-purple-100 rounded-lg mr-4"><Database className="w-6 h-6 text-purple-600" /></div>
-                        <div><h2 className="text-xl font-bold text-slate-900">Base de Minerais</h2></div>
+                        <div>
+                            <h2 className="text-xl font-bold text-slate-900">Base de Minerais</h2>
+                            <p className="text-sm text-slate-500 flex items-center mt-1">
+                                <span className="flex items-center text-xs bg-slate-200 px-2 py-0.5 rounded text-slate-600 mr-2">
+                                    <ExternalLink className="w-3 h-3 mr-1" /> webmineral.com/data
+                                </span>
+                                Selecione os minerais que farão parte da simulação.
+                            </p>
+                        </div>
                     </div>
-                    <button onClick={() => setShowMineralModal(false)}><X className="w-6 h-6 text-slate-400" /></button>
+                    <button onClick={() => setShowMineralModal(false)} className="hover:bg-slate-200 p-2 rounded-lg transition-colors"><X className="w-6 h-6 text-slate-400" /></button>
                 </div>
-                <div className="p-4 bg-white border-t border-slate-200 flex justify-end">
-                    <button onClick={() => setShowMineralModal(false)} className="px-6 py-2 bg-purple-600 text-white rounded-lg">Fechar</button>
-                </div>
+                
+                {mineralViewMode === 'list' ? (
+                    <>
+                        <div className="p-4 border-b border-slate-100 flex gap-4 bg-white">
+                             <div className="relative flex-1">
+                                <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-slate-400 w-4 h-4" />
+                                <input 
+                                    type="text" 
+                                    placeholder="Buscar por nome, fórmula ou classe..." 
+                                    value={mineralSearch}
+                                    onChange={(e) => setMineralSearch(e.target.value)}
+                                    className="w-full pl-10 pr-4 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-purple-500 outline-none"
+                                />
+                             </div>
+                             <button onClick={handleCreateMineral} className="px-4 py-2 bg-purple-600 text-white font-medium rounded-lg hover:bg-purple-700 flex items-center transition-colors shadow-sm">
+                                <Plus className="w-4 h-4 mr-2" /> Novo Mineral
+                             </button>
+                        </div>
+
+                        <div className="flex-1 overflow-auto bg-slate-50">
+                            <table className="w-full text-left border-collapse">
+                                <thead className="bg-slate-100 text-slate-600 sticky top-0 shadow-sm z-10">
+                                    <tr>
+                                        <th className="px-6 py-3 text-xs font-bold uppercase tracking-wider text-center w-12">Select</th>
+                                        <th className="px-6 py-3 text-xs font-bold uppercase tracking-wider">Mineral</th>
+                                        <th className="px-6 py-3 text-xs font-bold uppercase tracking-wider">Fórmula</th>
+                                        <th className="px-6 py-3 text-xs font-bold uppercase tracking-wider">SG (g/cm³)</th>
+                                        <th className="px-6 py-3 text-xs font-bold uppercase tracking-wider">WI (kWh/t)</th>
+                                        <th className="px-6 py-3 text-xs font-bold uppercase tracking-wider">Classe</th>
+                                        <th className="px-6 py-3 text-xs font-bold uppercase tracking-wider">Composição</th>
+                                        <th className="px-6 py-3 text-xs font-bold uppercase tracking-wider text-right">Ações</th>
+                                    </tr>
+                                </thead>
+                                <tbody className="divide-y divide-slate-200 bg-white">
+                                    {filteredMinerals.map(min => (
+                                        <tr key={min.id} className="hover:bg-purple-50 transition-colors group">
+                                            <td className="px-6 py-3 text-center">
+                                                <button 
+                                                    onClick={() => handleToggleSelection(min.id)}
+                                                    className={`p-1 rounded transition-colors ${min.selected ? 'text-purple-600 hover:text-purple-800' : 'text-slate-300 hover:text-slate-500'}`}
+                                                >
+                                                    {min.selected ? <CheckSquare className="w-5 h-5" /> : <Square className="w-5 h-5" />}
+                                                </button>
+                                            </td>
+                                            <td className="px-6 py-3 font-medium text-slate-900">{min.name}</td>
+                                            <td className="px-6 py-3 font-mono text-slate-600 bg-slate-50/50">{min.formula}</td>
+                                            <td className="px-6 py-3 text-slate-600">{min.density}</td>
+                                            <td className="px-6 py-3 text-slate-600">{min.workIndex}</td>
+                                            <td className="px-6 py-3 text-slate-600"><span className="inline-flex px-2 py-0.5 rounded-full text-xs font-medium bg-slate-100 text-slate-600">{min.class}</span></td>
+                                            <td className="px-6 py-3 text-xs text-slate-500 max-w-xs truncate" title={min.elementalComposition}>{min.elementalComposition}</td>
+                                            <td className="px-6 py-3 text-right">
+                                                <div className="flex justify-end space-x-2 opacity-0 group-hover:opacity-100 transition-opacity">
+                                                    <button onClick={() => handleEditMineral(min)} className="p-1 text-blue-600 hover:bg-blue-50 rounded"><Edit className="w-4 h-4" /></button>
+                                                    <button onClick={() => handleDeleteMineral(min.id)} className="p-1 text-red-600 hover:bg-red-50 rounded"><Trash2 className="w-4 h-4" /></button>
+                                                </div>
+                                            </td>
+                                        </tr>
+                                    ))}
+                                </tbody>
+                            </table>
+                        </div>
+                    </>
+                ) : (
+                    <div className="flex-1 overflow-y-auto p-8 bg-slate-50 flex justify-center">
+                        <div className="max-w-2xl w-full bg-white p-8 rounded-xl shadow-sm border border-slate-200 h-fit">
+                            <div className="flex items-center mb-6 border-b border-slate-100 pb-4">
+                                <button onClick={() => setMineralViewMode('list')} className="mr-4 text-slate-400 hover:text-slate-600"><ArrowLeft className="w-6 h-6" /></button>
+                                <h3 className="text-xl font-bold text-slate-800">{currentMineral.id?.startsWith('custom') ? 'Criar Novo Mineral' : 'Editar Mineral'}</h3>
+                            </div>
+                            
+                            <div className="grid grid-cols-2 gap-6 space-y-2">
+                                <div className="col-span-2">
+                                    <label className="block text-sm font-medium text-slate-700 mb-1">Nome do Mineral</label>
+                                    <input type="text" value={currentMineral.name || ''} onChange={(e) => setCurrentMineral(p => ({...p, name: e.target.value}))} className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-purple-500 outline-none" placeholder="Ex: Calcopirita" />
+                                </div>
+                                
+                                <div>
+                                    <label className="block text-sm font-medium text-slate-700 mb-1">Fórmula Química</label>
+                                    <div className="relative">
+                                        <FlaskConical className="absolute left-3 top-1/2 transform -translate-y-1/2 text-slate-400 w-4 h-4" />
+                                        <input type="text" value={currentMineral.formula || ''} onChange={(e) => setCurrentMineral(p => ({...p, formula: e.target.value}))} className="w-full pl-10 px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-purple-500 outline-none font-mono" placeholder="Ex: CuFeS2" />
+                                    </div>
+                                </div>
+                                
+                                <div>
+                                    <label className="block text-sm font-medium text-slate-700 mb-1">Classe Mineral</label>
+                                    <input type="text" value={currentMineral.class || ''} onChange={(e) => setCurrentMineral(p => ({...p, class: e.target.value}))} className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-purple-500 outline-none" placeholder="Ex: Sulfide" />
+                                </div>
+
+                                <div>
+                                    <label className="block text-sm font-medium text-slate-700 mb-1">Densidade (SG)</label>
+                                    <div className="relative">
+                                        <Scale className="absolute left-3 top-1/2 transform -translate-y-1/2 text-slate-400 w-4 h-4" />
+                                        <input type="number" step="0.01" value={currentMineral.density || 0} onChange={(e) => setCurrentMineral(p => ({...p, density: parseFloat(e.target.value)}))} className="w-full pl-10 px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-purple-500 outline-none" />
+                                    </div>
+                                </div>
+
+                                <div>
+                                    <label className="block text-sm font-medium text-slate-700 mb-1">Work Index (kWh/t)</label>
+                                    <div className="relative">
+                                        <Hammer className="absolute left-3 top-1/2 transform -translate-y-1/2 text-slate-400 w-4 h-4" />
+                                        <input type="number" step="0.1" value={currentMineral.workIndex || 0} onChange={(e) => setCurrentMineral(p => ({...p, workIndex: parseFloat(e.target.value)}))} className="w-full pl-10 px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-purple-500 outline-none" />
+                                    </div>
+                                </div>
+
+                                <div className="col-span-2">
+                                    <label className="block text-sm font-medium text-slate-700 mb-1">Composição Elementar</label>
+                                    <div className="relative">
+                                        <Atom className="absolute left-3 top-3 text-slate-400 w-4 h-4" />
+                                        <textarea 
+                                            value={currentMineral.elementalComposition || ''} 
+                                            onChange={(e) => setCurrentMineral(p => ({...p, elementalComposition: e.target.value}))} 
+                                            className="w-full pl-10 px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-purple-500 outline-none font-mono text-sm h-24" 
+                                            placeholder="Ex: Cu: 34.63%, Fe: 30.43%, S: 34.94%"
+                                        />
+                                    </div>
+                                    <p className="text-xs text-slate-500 mt-1">Formato: Elemento: Percentual%, ... (Usado para o balanço de massa)</p>
+                                </div>
+                            </div>
+
+                            <div className="mt-8 flex justify-end space-x-3">
+                                <button onClick={() => setMineralViewMode('list')} className="px-4 py-2 text-slate-600 font-medium hover:bg-slate-100 rounded-lg transition-colors">Cancelar</button>
+                                <button onClick={handleSaveMineral} className="px-6 py-2 bg-purple-600 text-white font-bold rounded-lg hover:bg-purple-700 shadow-md flex items-center transition-colors">
+                                    <Save className="w-4 h-4 mr-2" /> Salvar Mineral
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                )}
+
+                {mineralViewMode === 'list' && (
+                    <div className="p-4 bg-white border-t border-slate-200 flex justify-between items-center text-sm text-slate-500">
+                        <span>Total de {filteredMinerals.length} minerais cadastrados. <span className="text-purple-600 font-bold ml-1">{minerals.filter(m => m.selected).length} selecionados para o projeto.</span></span>
+                        <button onClick={() => setShowMineralModal(false)} className="px-6 py-2 bg-slate-100 text-slate-700 hover:bg-slate-200 font-medium rounded-lg transition-colors">Fechar</button>
+                    </div>
+                )}
             </div>
          </div>
       )}
@@ -852,6 +1051,16 @@ export const ProjectView: React.FC<ProjectViewProps> = ({
                                             />
                                         </div>
                                         <div>
+                                            <label className="block text-sm font-medium text-slate-700 mb-1">Tonalgem Sólida (t/h)</label>
+                                            <input 
+                                                type="number" 
+                                                placeholder="0.0"
+                                                value={editFormData.solidsTph || ''} 
+                                                onChange={(e) => setEditFormData(p=>({...p, solidsTph: e.target.value}))} 
+                                                className="w-full border border-slate-300 rounded-lg px-3 py-2 focus:ring-2 focus:ring-blue-500 outline-none transition-all font-mono text-slate-800" 
+                                            />
+                                        </div>
+                                        <div>
                                             <label className="block text-sm font-medium text-slate-700 mb-1">% Sólidos (Cw)</label>
                                             <input 
                                                 type="number" 
@@ -864,67 +1073,63 @@ export const ProjectView: React.FC<ProjectViewProps> = ({
                                    </div>
                                </div>
 
-                               {/* Composition Form */}
+                               {/* Composition Form (Dynamic) */}
                                <div>
                                    <h4 className="text-sm font-bold text-slate-500 uppercase tracking-wider mb-4 flex items-center border-b border-slate-100 pb-2">
                                        <Beaker className="w-4 h-4 mr-2" /> 
-                                       Composição Química (Components)
+                                       Composição Mineralógica (%)
                                    </h4>
-                                   <div className="bg-slate-50 rounded-lg border border-slate-200 p-4">
-                                       <div className="grid grid-cols-4 gap-4 mb-2">
-                                            <label className="text-xs font-bold text-slate-500 uppercase text-center">% Cu</label>
-                                            <label className="text-xs font-bold text-slate-500 uppercase text-center">% Fe</label>
-                                            <label className="text-xs font-bold text-slate-500 uppercase text-center">Au (g/t)</label>
-                                            <label className="text-xs font-bold text-slate-500 uppercase text-center">% S</label>
+                                   
+                                   {minerals.some(m => m.selected) ? (
+                                        <div className="bg-slate-50 rounded-lg border border-slate-200 p-4">
+                                            <div className="grid grid-cols-2 gap-4">
+                                                {minerals.filter(m => m.selected).map(min => (
+                                                    <div key={min.id}>
+                                                        <label className="block text-xs font-bold text-slate-500 uppercase mb-1">{min.name} (%)</label>
+                                                        <input 
+                                                            type="number" 
+                                                            placeholder="0.00"
+                                                            value={editFormData[`mineral_${min.id}`] || ''} 
+                                                            onChange={(e) => setEditFormData(p => ({...p, [`mineral_${min.id}`]: e.target.value}))} 
+                                                            className="w-full border border-slate-300 rounded-md px-2 py-1.5 focus:ring-2 focus:ring-purple-500 outline-none font-mono text-sm" 
+                                                        />
+                                                    </div>
+                                                ))}
+                                            </div>
+                                            <p className="text-xs text-slate-400 mt-3 flex items-center">
+                                                <Info className="w-3 h-3 mr-1" />
+                                                Insira a porcentagem em massa de cada mineral. O simulador calculará os teores elementares (Cu, Fe, S, etc.) automaticamente.
+                                            </p>
+                                        </div>
+                                   ) : (
+                                       <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-4 text-center">
+                                           <AlertTriangle className="w-6 h-6 text-yellow-500 mx-auto mb-2" />
+                                           <p className="text-sm text-yellow-800 font-medium">Nenhum mineral selecionado.</p>
+                                           <p className="text-xs text-yellow-700 mt-1">Vá em "Components" e selecione os minerais do seu projeto para definir a composição.</p>
                                        </div>
-                                       <div className="grid grid-cols-4 gap-4">
-                                            <input 
-                                                type="number" 
-                                                placeholder="0.00"
-                                                value={editFormData.assay_Cu || ''} 
-                                                onChange={(e) => setEditFormData(p=>({...p, assay_Cu: e.target.value}))} 
-                                                className="w-full border border-slate-300 rounded-md px-2 py-1.5 text-center focus:ring-2 focus:ring-blue-500 outline-none font-mono text-sm" 
-                                            />
-                                            <input 
-                                                type="number" 
-                                                placeholder="0.00"
-                                                value={editFormData.assay_Fe || ''} 
-                                                onChange={(e) => setEditFormData(p=>({...p, assay_Fe: e.target.value}))} 
-                                                className="w-full border border-slate-300 rounded-md px-2 py-1.5 text-center focus:ring-2 focus:ring-blue-500 outline-none font-mono text-sm" 
-                                            />
-                                            <input 
-                                                type="number" 
-                                                placeholder="0.00"
-                                                value={editFormData.assay_Au || ''} 
-                                                onChange={(e) => setEditFormData(p=>({...p, assay_Au: e.target.value}))} 
-                                                className="w-full border border-slate-300 rounded-md px-2 py-1.5 text-center focus:ring-2 focus:ring-blue-500 outline-none font-mono text-sm" 
-                                            />
-                                            <input 
-                                                type="number" 
-                                                placeholder="0.00"
-                                                value={editFormData.assay_S || ''} 
-                                                onChange={(e) => setEditFormData(p=>({...p, assay_S: e.target.value}))} 
-                                                className="w-full border border-slate-300 rounded-md px-2 py-1.5 text-center focus:ring-2 focus:ring-blue-500 outline-none font-mono text-sm" 
-                                            />
-                                       </div>
-                                   </div>
+                                   )}
                                </div>
                            </div>
                        ) : (
                            // Equipamentos (Nodes)
                            <div className="space-y-4">
                                 <div className="grid grid-cols-1 gap-4">
-                                    {Object.entries(editFormData).map(([key, value]) => (
-                                        <div key={key}>
-                                            <label className="block text-sm font-medium text-slate-700 capitalize mb-1">{key.replace(/([A-Z])/g, ' $1').trim()}</label>
-                                            <input 
-                                                type="text" 
-                                                value={value as any} 
-                                                onChange={(e) => setEditFormData(p=>({...p, [key]: e.target.value}))} 
-                                                className="w-full border border-slate-300 rounded-lg p-2 focus:ring-2 focus:ring-blue-500 outline-none transition-all" 
-                                            />
-                                        </div>
-                                    ))}
+                                    {Object.entries(editFormData).map(([key, value]) => {
+                                        // Filter out internal keys or complex objects if needed
+                                        if (typeof value === 'object') return null;
+                                        
+                                        return (
+                                            <div key={key}>
+                                                <label className="block text-sm font-medium text-slate-700 capitalize mb-1">{key.replace(/([A-Z])/g, ' $1').trim()}</label>
+                                                <input 
+                                                    type="text" 
+                                                    value={value as any} 
+                                                    onChange={(e) => setEditFormData(p=>({...p, [key]: e.target.value}))} 
+                                                    className="w-full border border-slate-300 rounded-lg p-2 focus:ring-2 focus:ring-blue-500 outline-none transition-all" 
+                                                />
+                                            </div>
+                                        );
+                                    })}
                                 </div>
                            </div>
                        )}

@@ -1,7 +1,6 @@
 
-
 import React from 'react';
-import { FileText, AlertTriangle, CheckSquare, Download, Activity, ArrowRight } from 'lucide-react';
+import { FileText, AlertTriangle, CheckSquare, Download, Activity, ArrowRight, Beaker } from 'lucide-react';
 import { SimulationResult } from '../services/flowsheetSolver';
 import { EquipmentType, Connection } from '../types';
 
@@ -31,6 +30,8 @@ export const ResultsView: React.FC<ResultsViewProps> = ({ results, connections, 
       </div>
     );
   }
+
+  const hasMinerals = results.activeMinerals && results.activeMinerals.length > 0;
 
   return (
     <div className="space-y-6 animate-in fade-in slide-in-from-bottom-4 duration-500">
@@ -79,15 +80,24 @@ export const ResultsView: React.FC<ResultsViewProps> = ({ results, connections, 
            <span className="text-xs font-medium text-slate-500 bg-slate-100 px-2 py-1 rounded">Todas as vazões em t/h</span>
         </div>
         <div className="overflow-x-auto">
-            <table className="w-full text-left text-sm">
+            <table className="w-full text-left text-sm whitespace-nowrap">
                 <thead className="bg-slate-50 text-slate-600 border-b border-slate-200">
                     <tr>
-                        <th className="px-6 py-3 font-bold uppercase text-xs tracking-wider">Corrente</th>
-                        <th className="px-6 py-3 font-bold text-right uppercase text-xs tracking-wider">Vazão Total</th>
-                        <th className="px-6 py-3 font-bold text-right uppercase text-xs tracking-wider">Sólidos</th>
-                        <th className="px-6 py-3 font-bold text-right uppercase text-xs tracking-wider">Água (m³/h)</th>
-                        <th className="px-6 py-3 font-bold text-right uppercase text-xs tracking-wider">% Sólidos</th>
-                        <th className="px-6 py-3 font-bold text-right uppercase text-xs tracking-wider">Densidade (t/m³)</th>
+                        <th className="px-6 py-3 font-bold uppercase text-xs tracking-wider sticky left-0 bg-slate-50 z-10">Corrente</th>
+                        
+                        {/* Physical Properties */}
+                        <th className="px-6 py-3 font-bold text-right uppercase text-xs tracking-wider text-blue-700">Vazão Total</th>
+                        <th className="px-6 py-3 font-bold text-right uppercase text-xs tracking-wider text-blue-700">Sólidos</th>
+                        <th className="px-6 py-3 font-bold text-right uppercase text-xs tracking-wider text-blue-700">Água (m³/h)</th>
+                        <th className="px-6 py-3 font-bold text-right uppercase text-xs tracking-wider text-blue-700">% Sólidos</th>
+                        <th className="px-6 py-3 font-bold text-right uppercase text-xs tracking-wider text-blue-700">SG</th>
+                        
+                        {/* Dynamic Mineral Columns (User Selected Only) */}
+                        {hasMinerals && results.activeMinerals?.map(m => (
+                            <th key={m.id} className="px-6 py-3 font-bold text-right uppercase text-xs tracking-wider border-l border-slate-200 text-purple-700">
+                                % {m.name}
+                            </th>
+                        ))}
                     </tr>
                 </thead>
                 <tbody className="divide-y divide-slate-100">
@@ -97,7 +107,7 @@ export const ResultsView: React.FC<ResultsViewProps> = ({ results, connections, 
                         
                         return (
                           <tr key={id} className="hover:bg-slate-50 transition-colors">
-                              <td className="px-6 py-4 font-medium text-slate-900">
+                              <td className="px-6 py-4 font-medium text-slate-900 sticky left-0 bg-white z-10 shadow-[2px_0_5px_-2px_rgba(0,0,0,0.1)]">
                                 {label}
                                 {connection?.label && <span className="block text-xs text-slate-400 font-mono font-normal">{id.split('_')[1]}</span>}
                               </td>
@@ -110,12 +120,29 @@ export const ResultsView: React.FC<ResultsViewProps> = ({ results, connections, 
                                 </span>
                               </td>
                               <td className="px-6 py-4 text-right text-slate-600">{stream.slurryDensity.toFixed(2)}</td>
+                              
+                              {/* Dynamic Mineral Grades */}
+                              {hasMinerals && results.activeMinerals?.map(m => {
+                                  const mass = stream.mineralFlows?.[m.id] || 0;
+                                  const grade = stream.solidsTph > 0 ? (mass / stream.solidsTph) * 100 : 0;
+                                  return (
+                                      <td key={m.id} className="px-6 py-4 text-right font-mono text-purple-700 border-l border-slate-100 bg-purple-50/30">
+                                          {grade.toFixed(2)}
+                                      </td>
+                                  );
+                              })}
                           </tr>
                         );
                     })}
                 </tbody>
             </table>
         </div>
+        {hasMinerals && (
+            <div className="p-4 bg-slate-50 text-xs text-slate-500 flex items-center border-t border-slate-200">
+                <Beaker className="w-4 h-4 mr-2 text-purple-500" />
+                As colunas em roxo indicam a composição mineralógica definida pelo usuário na etapa de configuração.
+            </div>
+        )}
       </div>
 
       {/* 3. Diagnóstico Técnico */}
