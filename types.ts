@@ -149,3 +149,13 @@ export interface Connection {
   // Calculated State (The result of the balance)
   streamState?: StreamData; 
 }
+
+// --- Logging System ---
+export type LogType = 'info' | 'success' | 'warning' | 'error';
+
+export interface LogEntry {
+  id: number;
+  timestamp: string;
+  type: LogType;
+  message: string;
+}

@@ -1,12 +1,10 @@
 
-
 import { NodeData, Connection, StreamData, Mineral } from '../types';
 import { calculateStreamProperties, calculateStreamAssays } from './miningMath';
 
 // --- Constants ---
 const MAX_ITERATIONS = 500;
 const TOLERANCE_ABS = 1e-4; // 0.0001 t/h absolute tolerance
-const TOLERANCE_REL = 1e-4; // 0.01% relative tolerance
 
 export interface SimulationResult {
   converged: boolean;
@@ -29,22 +27,18 @@ const createEmptyStream = (): StreamData => ({
   elementalAssays: { Cu: 0, Fe: 0, Au: 0, S: 0 }
 });
 
-// --- 1. Topological Validation (Pre-Flight Check) ---
+// --- 1. Topological Validation ---
 const validateFlowsheet = (nodes: NodeData[], connections: Connection[]): string[] => {
     const errors: string[] = [];
-    
-    // Check 1: Must have Feed
     const feeds = nodes.filter(n => n.type === 'Feed');
     if (feeds.length === 0) errors.push("ERRO CRÍTICO: O fluxograma não possui nenhuma alimentação ('Feed'). Adicione pelo menos uma.");
 
-    // Check 2: Connections Validity
     connections.forEach(conn => {
         if (!conn.fromNode || !conn.toNode) {
             errors.push(`ERRO: A conexão '${conn.label || conn.id}' está solta. Conecte ambas as pontas.`);
         }
     });
 
-    // Check 3: Node Connectivity (Islands & Dead ends)
     nodes.forEach(node => {
         const inputConns = connections.filter(c => c.toNode === node.id);
         const outputConns = connections.filter(c => c.fromNode === node.id);
@@ -55,50 +49,19 @@ const validateFlowsheet = (nodes: NodeData[], connections: Connection[]): string
         if (node.type !== 'Product' && outputConns.length === 0) {
             errors.push(`ERRO: O equipamento '${node.label}' não tem saída.`);
         }
-        
-        // Check 4: Specific Logic Parameters
-        if (node.type === 'Splitter' && !node.parameters.splitRatio) {
-            errors.push(`AVISO: Splitter '${node.label}' sem razão de corte definida. Usando padrão 50/50.`);
-        }
 
-        // Check 5: Strict Feed Parameter Validation (MANDATORY USER INPUT)
+        // Strict Feed Parameter Validation
         if (node.type === 'Feed') {
-            // Find the outgoing connection for this feed to get params
             const feedConn = connections.find(c => c.fromNode === node.id);
             if (feedConn) {
-                // Priority: Connection params (user edited stream) > Node params
                 const p = { ...node.parameters, ...feedConn.parameters };
-                
-                // Parse values safely
-                const tph = parseFloat(String(p.solidsTph || 0));
-                const vol = parseFloat(String(p.volumetricFlow || 0));
-                const pct = parseFloat(String(p.percentSolids || 0));
-
-                // Validation A: Flow Rate exists (Must be > 0)
-                if (tph <= 0 && vol <= 0) {
-                    errors.push(`ERRO DE INPUT: A alimentação '${node.label}' (Corrente: ${feedConn.label || 'Sem Nome'}) não possui vazão definida. Edite a corrente e informe 'Vazão Volumétrica' ou 'Tonalgem Sólida' maior que zero.`);
-                }
-                
-                // Validation B: % Solids exists
-                if (pct <= 0 || pct > 100) {
-                    errors.push(`ERRO DE INPUT: A alimentação '${node.label}' (Corrente: ${feedConn.label || 'Sem Nome'}) deve ter % Sólidos entre 0.1 e 100.`);
-                }
-
-                // Validation C: Minerals exist (Chemistry check)
-                // Check if any 'mineral_<id>' param > 0
                 let hasMinerals = false;
                 Object.keys(p).forEach(key => {
-                    if (key.startsWith('mineral_')) {
-                        const val = parseFloat(p[key]);
-                        if (val > 0) hasMinerals = true;
-                    }
+                    if (key.startsWith('mineral_') && parseFloat(p[key]) > 0) hasMinerals = true;
                 });
-                
                 if (!hasMinerals) {
-                     errors.push(`ERRO DE COMPONENTES: A alimentação '${node.label}' (Corrente: ${feedConn.label || 'Sem Nome'}) não possui composição mineralógica definida. Edite a corrente e informe a % dos minerais selecionados.`);
+                     errors.push(`ERRO DE COMPONENTES: A alimentação '${node.label}' não possui composição mineralógica definida. Defina as % dos minerais na conexão de saída.`);
                 }
-            } else {
-                errors.push(`ERRO: O Alimentador '${node.label}' não está conectado a nada.`);
             }
         }
     });
@@ -106,12 +69,10 @@ const validateFlowsheet = (nodes: NodeData[], connections: Connection[]): string
     return errors;
 };
 
-// --- 2. Solver Engine (Iterative) ---
+// --- 2. Solver Engine (Iterative Component Balance) ---
 export const solveFlowsheet = (nodes: NodeData[], connections: Connection[], mineralsDb: Mineral[]): SimulationResult => {
   // A. Validation
   const topologyErrors = validateFlowsheet(nodes, connections);
-  
-  // Strict Block: If any errors exist, do not run simulation logic.
   if (topologyErrors.length > 0) {
       return {
           converged: false, iterations: 0, error: 100, streams: {},
@@ -124,9 +85,7 @@ export const solveFlowsheet = (nodes: NodeData[], connections: Connection[], min
   // B. Initialization
   let streamState: Record<string, StreamData> = {};
   
-  // Initialize user-defined Feeds
   connections.forEach(conn => {
-      // Logic: If connection comes from a 'Feed' node, use node/conn params to init
       const sourceNode = nodes.find(n => n.id === conn.fromNode);
       if (sourceNode?.type === 'Feed') {
           streamState[conn.id] = initializeFeedStream(sourceNode, conn, mineralsDb);
@@ -139,11 +98,10 @@ export const solveFlowsheet = (nodes: NodeData[], connections: Connection[], min
   let maxError = 0;
   let iter = 0;
 
-  // C. Iteration Loop (Successive Substitution)
+  // C. Iteration Loop
   for (iter = 0; iter < MAX_ITERATIONS; iter++) {
     maxError = 0;
 
-    // Topological sort approximation: Process Feed first, then others
     const sortedNodes = [
         ...nodes.filter(n => n.type === 'Feed'),
         ...nodes.filter(n => n.type !== 'Feed' && n.type !== 'Product'),
@@ -151,14 +109,14 @@ export const solveFlowsheet = (nodes: NodeData[], connections: Connection[], min
     ];
 
     for (const node of sortedNodes) {
-      if (node.type === 'Feed') continue; // Feeds are constant boundary conditions
+      if (node.type === 'Feed') continue; 
 
       // 1. Sum Inputs
       const inputConns = connections.filter(c => c.toNode === node.id);
       const inputStreams = inputConns.map(c => streamState[c.id]);
       
       // 2. Calculate Model
-      const outputStreamsData = calculateNodeModel(node, inputStreams, connections.filter(c => c.fromNode === node.id), mineralsDb);
+      const outputStreamsData = calculateNodeModel(node, inputStreams, mineralsDb);
 
       // 3. Update Outputs & Check Convergence
       const outputConns = connections.filter(c => c.fromNode === node.id);
@@ -167,30 +125,24 @@ export const solveFlowsheet = (nodes: NodeData[], connections: Connection[], min
         let newStream = outputStreamsData[idx] || createEmptyStream();
         let oldStream = streamState[conn.id];
 
-        // Error Calculation (on Total Mass Flow)
         const diff = Math.abs(newStream.totalTph - oldStream.totalTph);
         if (diff > maxError) maxError = diff;
 
-        // Update State
         streamState[conn.id] = newStream;
       });
     }
 
-    // Check Convergence
-    // We check absolute error on Mass Flow.
     if (maxError < TOLERANCE_ABS) break;
   }
 
-  // D. Global Balance Check (Zero Error verification)
+  // D. Global Balance Check
   let inputsTotal = 0;
   let outputsTotal = 0;
 
-  // Inputs = Sum of streams leaving Feed nodes
   nodes.filter(n => n.type === 'Feed').forEach(n => {
       connections.filter(c => c.fromNode === n.id).forEach(c => inputsTotal += streamState[c.id].totalTph);
   });
   
-  // Outputs = Sum of streams entering Product nodes
   nodes.filter(n => n.type === 'Product').forEach(n => {
        connections.filter(c => c.toNode === n.id).forEach(c => outputsTotal += streamState[c.id].totalTph);
   });
@@ -205,7 +157,7 @@ export const solveFlowsheet = (nodes: NodeData[], connections: Connection[], min
   return {
     converged: maxError < TOLERANCE_ABS,
     iterations: iter,
-    error: errorPct < 1e-4 ? 0 : errorPct, // Snap to zero if negligible
+    error: errorPct < 1e-4 ? 0 : errorPct,
     streams: streamState,
     globalBalance: { inputs: inputsTotal, outputs: outputsTotal, error: errorPct < 1e-4 ? 0 : errorPct },
     diagnostics: [...new Set(diagnostics)],
@@ -216,40 +168,21 @@ export const solveFlowsheet = (nodes: NodeData[], connections: Connection[], min
 // --- 3. Node Models (Physics Engines) ---
 
 const initializeFeedStream = (node: NodeData, conn: Connection, mineralsDb: Mineral[]): StreamData => {
-    // Priority: Connection Params > Node Params > Defaults
     const p = { ...node.parameters, ...conn.parameters }; 
     
-    // Check if user entered Volumetric or Mass
-    let totalTph = 0;
-    let solidsTph = 0;
-    let waterTph = 0;
-    
-    // Strict Input Parsing (No defaults here, relying on validation)
+    let solidsTph = parseFloat(p.solidsTph) || 0;
     const pct = parseFloat(p.percentSolids) || 0; 
-    const sg = parseFloat(p.sg) || 2.7; // Default SG, usually overwritten by mineral SG
-
+    
+    // Volumetric override
     if (p.volumetricFlow && parseFloat(p.volumetricFlow) > 0) {
+        // Approximate initial calc, refined later by component sum
         const vol = parseFloat(p.volumetricFlow);
-        // Calc density
-        // Prevent division by zero if pct is 0 (though validation should catch this)
-        if (pct > 0) {
-            const slurryDensity = 100 / ((pct/sg) + ((100-pct)/1));
-            totalTph = vol * slurryDensity;
-        }
-    } else {
-        solidsTph = parseFloat(p.solidsTph) || 0;
-        if (pct > 0) {
-            totalTph = solidsTph / (pct/100);
-        }
-    }
-    
-    // Recalculate based on total to ensure consistency
-    if (totalTph > 0 && pct > 0) {
+        const approxSg = 2.7;
+        const slurryDensity = 100 / ((pct/approxSg) + ((100-pct)/1));
+        const totalTph = vol * slurryDensity;
         solidsTph = totalTph * (pct/100);
-        waterTph = totalTph - solidsTph;
     }
     
-    // Initialize Component Vectors based on user input (Mineral %)
     const mineralFlows: Record<string, number> = {};
     let totalMineralPct = 0;
     let weightedSgSum = 0;
@@ -263,51 +196,36 @@ const initializeFeedStream = (node: NodeData, conn: Connection, mineralsDb: Mine
                 mineralFlows[mineralId] = mineralMass;
                 totalMineralPct += valPct;
                 
-                // For SG Weighted Average
                 const mineralDef = mineralsDb.find(m => m.id === mineralId);
                 if (mineralDef) {
                     weightedSgSum += valPct * mineralDef.density;
                 } else {
-                    weightedSgSum += valPct * 2.7; // Fallback
+                    weightedSgSum += valPct * 2.7; 
                 }
             }
         }
     });
     
-    // Normalize Mass: If mineral % doesn't sum to 100%, we shouldn't create or destroy mass.
-    // BUT, for the solver to be component-based, we define solidsTph = sum(components)
-    // If user entered 60% Silica + 20% Gold = 80% total, we assume the rest is unaccounted or user error.
-    // To be robust: We trust the mass sum.
-    
+    // RE-CALCULATE SOLIDS FROM COMPONENT SUM TO ENSURE CONSISTENCY
     const massFromComponents = Object.values(mineralFlows).reduce((a, b) => a + b, 0);
-    
-    // Update solidsTph to match sum of components (Prevents component balance drift)
-    if (Math.abs(massFromComponents - solidsTph) > 0.001 && massFromComponents > 0) {
+    if (massFromComponents > 0) {
         solidsTph = massFromComponents;
-        // Recalculate total based on fixed solids and %Cw
-        if (pct > 0) {
-             totalTph = solidsTph / (pct/100);
-             waterTph = totalTph - solidsTph;
-        }
     }
 
-    // Calc Average SG of Solids
-    const avgSg = totalMineralPct > 0 ? weightedSgSum / totalMineralPct : sg;
+    let totalTph = 0;
+    let waterTph = 0;
+    if (pct > 0) {
+         totalTph = solidsTph / (pct/100);
+         waterTph = totalTph - solidsTph;
+    }
 
-    // Calculate Elemental Assays from Minerals
-    const assays = calculateStreamAssays(mineralFlows, mineralsDb);
-
+    const avgSg = totalMineralPct > 0 ? weightedSgSum / totalMineralPct : 2.7;
     const slurryDensity = pct > 0 ? 100 / ((pct/avgSg) + ((100-pct)/1)) : 1;
 
     return {
         totalTph, solidsTph, waterTph, percentSolids: pct, slurryDensity, sgSolids: avgSg,
         mineralFlows,
-        elementalAssays: {
-            Cu: assays.Cu || 0,
-            Fe: assays.Fe || 0,
-            Au: assays.Au || 0,
-            S: assays.S || 0,
-        }
+        elementalAssays: {}
     };
 };
 
@@ -317,8 +235,6 @@ const mixStreams = (streams: StreamData[]): StreamData => {
 
     streams.forEach(s => {
         water += s.waterTph;
-        
-        // Combine minerals
         if (s.mineralFlows) {
             Object.entries(s.mineralFlows).forEach(([mid, mass]) => {
                 combinedMineralFlows[mid] = (combinedMineralFlows[mid] || 0) + mass;
@@ -326,14 +242,11 @@ const mixStreams = (streams: StreamData[]): StreamData => {
         }
     });
     
-    // Derive solids from component sum
     const solids = Object.values(combinedMineralFlows).reduce((a, b) => a + b, 0);
     
-    // Recalculate SG
+    // SG Calc
     let momSg = 0;
-    streams.forEach(s => {
-         momSg += s.solidsTph * s.sgSolids;
-    });
+    streams.forEach(s => { momSg += s.solidsTph * s.sgSolids; });
     const avgSg = solids > 0 ? momSg / solids : 2.7;
     
     const pct = (solids + water) > 0 ? (solids / (solids + water)) * 100 : 0;
@@ -346,123 +259,84 @@ const mixStreams = (streams: StreamData[]): StreamData => {
         sgSolids: avgSg,
         slurryDensity: 100 / ((pct/avgSg) + ((100-pct)/1)),
         mineralFlows: combinedMineralFlows,
-        elementalAssays: {} // Will be calculated later if needed, strictly mixing mass for now
+        elementalAssays: {} 
     };
 };
 
-const calculateNodeModel = (node: NodeData, inputs: StreamData[], outputConns: Connection[], mineralsDb: Mineral[]): StreamData[] => {
+const calculateNodeModel = (node: NodeData, inputs: StreamData[], mineralsDb: Mineral[]): StreamData[] => {
     const p = node.parameters || {};
-
-    // Base: Mix everything first (perfect mixing assumption for feed to unit)
     const feed = mixStreams(inputs);
     
-    // -- MODEL: PRODUCT --
-    if (node.type === 'Product') {
+    if (node.type === 'Product' || node.type === 'Mixer' || node.type === 'Conditioner' || node.type === 'Britador') {
         return [feed];
     }
 
-    // -- MODEL: MIXER / CRUSHER / CONDITIONER --
-    if (node.type === 'Mixer' || node.type === 'Conditioner' || node.type === 'Britador') {
-        return [feed];
-    }
-
-    // -- MODEL: SPLITTER (Mass Split, Isosample) --
+    // -- SPLITTER --
     if (node.type === 'Splitter') {
         const ratio = parseFloat(p.splitRatio || 50) / 100;
         
-        // Output 1
         const s1Minerals: Record<string, number> = {};
         Object.keys(feed.mineralFlows).forEach(k => s1Minerals[k] = feed.mineralFlows[k] * ratio);
+        const s1 = createStreamFromComponents(s1Minerals, feed.waterTph * ratio, feed.sgSolids);
         
-        const s1Solids = Object.values(s1Minerals).reduce((a, b) => a + b, 0);
-        const s1Water = feed.waterTph * ratio;
-        
-        const s1 = createStreamFromMass(s1Solids, s1Water, feed.sgSolids, {}, s1Minerals);
-        
-        // Output 2 (Conservation: Out2 = In - Out1)
         const s2Minerals: Record<string, number> = {};
-        Object.keys(feed.mineralFlows).forEach(k => s2Minerals[k] = feed.mineralFlows[k] - s1Minerals[k]);
-        
-        const s2Solids = Object.values(s2Minerals).reduce((a, b) => a + b, 0);
-        const s2Water = feed.waterTph - s1Water;
-        
-        const s2 = createStreamFromMass(s2Solids, s2Water, feed.sgSolids, {}, s2Minerals);
+        Object.keys(feed.mineralFlows).forEach(k => s2Minerals[k] = feed.mineralFlows[k] * (1 - ratio));
+        const s2 = createStreamFromComponents(s2Minerals, feed.waterTph * (1 - ratio), feed.sgSolids);
         
         return [s1, s2];
     }
 
-    // -- MODEL: BALL MILL (Water Addition Only) --
+    // -- BALL MILL --
     if (node.type === 'Moinho') {
         const targetDischarge = parseFloat(p.targetDischargeSolids || 70);
-        
         let water = feed.waterTph;
         const solids = feed.solidsTph;
         
-        // Water Addition Logic (Control Loop)
+        // Water Addition Logic
         const currentPct = (solids + water) > 0 ? (solids / (solids + water)) * 100 : 0;
-        
-        // Only add water, never remove
         if (currentPct > targetDischarge && solids > 0) {
-            const reqWater = (solids * (100 - targetDischarge)) / targetDischarge;
-            water = reqWater; 
+            water = (solids * (100 - targetDischarge)) / targetDischarge;
         }
         
-        return [{
-            ...feed,
-            waterTph: water,
-            totalTph: solids + water,
-            percentSolids: (solids + water) > 0 ? (solids / (solids + water)) * 100 : 0,
-            slurryDensity: 100 / ((targetDischarge/feed.sgSolids) + ((100-targetDischarge)/1)) // Approx update
-        }];
+        // Return feed with adjusted water (Components pass through)
+        return [createStreamFromComponents(feed.mineralFlows, water, feed.sgSolids)];
     }
 
-    // -- MODEL: HYDROCYCLONE (Component-Based Classification) --
+    // -- HYDROCYCLONE (Physics: Density & Water Split) --
     if (node.type === 'Hydrocyclone') {
         const Rf = parseFloat(p.waterRecoveryToUnderflow || 40) / 100;
-        const baseSolidsSplit = 0.75; // Target split to UF
+        const baseSolidsSplit = 0.75; // Typical solids split to UF
         
         const ufMinerals: Record<string, number> = {};
         const ofMinerals: Record<string, number> = {};
         
-        // Density-based Separation Adjustment
         Object.keys(feed.mineralFlows).forEach(k => {
              const mineral = mineralsDb.find(m => m.id === k);
              const sg = mineral ? mineral.density : 2.7;
              const massIn = feed.mineralFlows[k];
              
-             // Heavier than 2.7 -> Increase split to UF
-             // Lighter than 2.7 -> Decrease split to UF
-             let splitToUf = baseSolidsSplit + ((sg - 2.7) * 0.05);
-             splitToUf = Math.max(0.05, Math.min(0.95, splitToUf)); 
+             // Density Effect: Higher SG -> Higher chance to go UF
+             // Adjustment factor k = 0.05 per SG unit diff from 2.7
+             let splitToUf = baseSolidsSplit + ((sg - 2.7) * 0.08); 
+             splitToUf = Math.max(0.01, Math.min(0.99, splitToUf)); 
 
              const massUf = massIn * splitToUf;
              
              ufMinerals[k] = massUf;
-             ofMinerals[k] = massIn - massUf; // Strict Balance
+             ofMinerals[k] = massIn - massUf; // Strict Mass Conservation
         });
 
-        // Sum up solids from components
-        const ufSolids = Object.values(ufMinerals).reduce((a, b) => a + b, 0);
-        const ofSolids = Object.values(ofMinerals).reduce((a, b) => a + b, 0);
-        
-        const ufWater = feed.waterTph * Rf;
-        const ofWater = feed.waterTph * (1 - Rf);
-        
-        // Recalculate SG for streams based on new composition
-        const ufStream = createStreamFromMass(ufSolids, ufWater, feed.sgSolids, {}, ufMinerals); 
-        const ofStream = createStreamFromMass(ofSolids, ofWater, feed.sgSolids, {}, ofMinerals);
+        const ufStream = createStreamFromComponents(ufMinerals, feed.waterTph * Rf, feed.sgSolids); 
+        const ofStream = createStreamFromComponents(ofMinerals, feed.waterTph * (1 - Rf), feed.sgSolids);
         
         return [ofStream, ufStream]; // [Overflow, Underflow]
     }
 
-    // -- MODEL: FLOTATION (Recovery-Based Enrichment) --
+    // -- FLOTATION (Recovery Based) --
     if (node.type === 'FlotationCell') {
-        // User Inputs
-        const targetRecovery = parseFloat(p.mineralRecovery || 90) / 100; // Target for Valuable Minerals
+        const targetRecovery = parseFloat(p.mineralRecovery || 90) / 100;
         const waterPull = parseFloat(p.waterPull || 15) / 100;
-        // Mass Pull is treated as a loose constraint or result in this logic to ensure component balance closes.
-        // We use an entrainment factor for Gangue to simulate realistic separation.
-        const gangueEntrainment = 0.10; // 10% of gangue follows water/conc by default
+        const gangueEntrainment = 0.05; // 5% of non-target goes to conc
         
         const concMinerals: Record<string, number> = {};
         const tailMinerals: Record<string, number> = {};
@@ -470,51 +344,38 @@ const calculateNodeModel = (node: NodeData, inputs: StreamData[], outputConns: C
         Object.keys(feed.mineralFlows).forEach(mid => {
             const mineral = mineralsDb.find(m => m.id === mid);
             const massIn = feed.mineralFlows[mid];
-            const isTarget = mineral && (mineral.class === 'Sulfide' || mineral.class === 'Native Element' || mineral.selected); // Simplified selection logic
             
-            let splitToConc = 0;
-            if (isTarget) {
-                splitToConc = targetRecovery;
-            } else {
-                splitToConc = gangueEntrainment;
-            }
+            // Determine if mineral is hydrophobic (Target)
+            // Logic: Sulfides and Native Elements float. Silicates/Oxides depress.
+            const isTarget = mineral && (mineral.class === 'Sulfide' || mineral.class === 'Native Element' || mineral.selected); 
+            
+            const splitToConc = isTarget ? targetRecovery : gangueEntrainment;
             
             const massConc = massIn * splitToConc;
             concMinerals[mid] = massConc;
-            tailMinerals[mid] = massIn - massConc; // Strict Conservation
+            tailMinerals[mid] = massIn - massConc;
         });
 
-        const concSolids = Object.values(concMinerals).reduce((a, b) => a + b, 0);
-        const tailSolids = Object.values(tailMinerals).reduce((a, b) => a + b, 0);
-        
-        const concWater = feed.waterTph * waterPull;
-        const tailWater = feed.waterTph - concWater;
-
-        const conc = createStreamFromMass(concSolids, concWater, feed.sgSolids, {}, concMinerals);
-        const tail = createStreamFromMass(tailSolids, tailWater, feed.sgSolids, {}, tailMinerals);
+        const conc = createStreamFromComponents(concMinerals, feed.waterTph * waterPull, feed.sgSolids);
+        const tail = createStreamFromComponents(tailMinerals, feed.waterTph * (1 - waterPull), feed.sgSolids);
         
         return [conc, tail];
     }
 
-    // Default fallback
     return [feed];
 };
 
-const createStreamFromMass = (solids: number, water: number, defaultSg: number, assays: any, minerals: Record<string, number> = {}): StreamData => {
+const createStreamFromComponents = (minerals: Record<string, number>, water: number, defaultSg: number): StreamData => {
+    const solids = Object.values(minerals).reduce((a, b) => a + b, 0);
     const total = solids + water;
     const pct = total > 0 ? (solids/total)*100 : 0;
     
-    // Recalculate SG based on component mix if possible
-    let weightedVolume = 0;
-    // Need density of each mineral. Since we don't pass mineralsDb easily here without prop drilling, 
-    // we use a simplified assumption or rely on the passed SG if minerals are empty.
-    // Ideally, calculateNodeModel computes the new SG and passes it here.
-    // For now, we use defaultSg to maintain stability, as SG changes in float/cyclone are minor relative to flow errors.
-    
+    // In a full implementation, we would re-calculate SG here based on the new mix of minerals
+    // For this iteration, we keep the parent SG to avoid instability unless we pass the DB everywhere strictly
     const den = 100 / ((pct/defaultSg) + ((100-pct)/1));
     
     return {
         totalTph: total, solidsTph: solids, waterTph: water, percentSolids: pct, slurryDensity: den, sgSolids: defaultSg,
-        mineralFlows: minerals, elementalAssays: assays
+        mineralFlows: minerals, elementalAssays: {}
     };
 };

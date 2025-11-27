@@ -1,8 +1,7 @@
-
 import React from 'react';
 import { FileText, AlertTriangle, CheckSquare, Download, Activity, ArrowRight, Beaker } from 'lucide-react';
 import { SimulationResult } from '../services/flowsheetSolver';
-import { EquipmentType, Connection } from '../types';
+import { EquipmentType, Connection, StreamData } from '../types';
 
 interface ResultsViewProps {
   results: SimulationResult | null;
@@ -101,7 +100,8 @@ export const ResultsView: React.FC<ResultsViewProps> = ({ results, connections, 
                     </tr>
                 </thead>
                 <tbody className="divide-y divide-slate-100">
-                    {Object.entries(results.streams).map(([id, stream]) => {
+                    {Object.entries(results.streams).map(([id, s]) => {
+                        const stream = s as StreamData;
                         const connection = connections.find(c => c.id === id);
                         const label = connection?.label || id.split('_')[1] || id;
                         

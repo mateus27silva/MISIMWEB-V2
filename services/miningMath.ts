@@ -1,6 +1,21 @@
 
 import { BallMillInputs, HydrocycloneInputs, StreamData, Mineral } from '../types';
 
+// --- Database Constant ---
+
+export const WEBMINERAL_DB: Mineral[] = [
+  { id: '1', name: 'Quartz', formula: 'SiO2', density: 2.65, abrasionIndex: 0.75, workIndex: 13.5, class: 'Silicate', molecularWeight: 60.08, elementalComposition: 'Si: 46.74%, O: 53.26%', color: 'Colorless, White', luster: 'Vitreous', selected: true },
+  { id: '2', name: 'Hematite', formula: 'Fe2O3', density: 5.26, abrasionIndex: 0.30, workIndex: 12.8, class: 'Oxide', molecularWeight: 159.69, elementalComposition: 'Fe: 69.94%, O: 30.06%', color: 'Steel grey, Reddish brown', luster: 'Metallic', selected: false },
+  { id: '3', name: 'Magnetite', formula: 'Fe3O4', density: 5.18, abrasionIndex: 0.25, workIndex: 10.0, class: 'Oxide', molecularWeight: 231.53, elementalComposition: 'Fe: 72.36%, O: 27.64%', color: 'Iron black', luster: 'Metallic', selected: false },
+  { id: '5', name: 'Pyrite', formula: 'FeS2', density: 5.01, abrasionIndex: 0.45, workIndex: 14.0, class: 'Sulfide', molecularWeight: 119.98, elementalComposition: 'Fe: 46.55%, S: 53.45%', color: 'Pale brass yellow', luster: 'Metallic', selected: true },
+  { id: '6', name: 'Chalcopyrite', formula: 'CuFeS2', density: 4.2, abrasionIndex: 0.12, workIndex: 10.5, class: 'Sulfide', molecularWeight: 183.53, elementalComposition: 'Cu: 34.63%, Fe: 30.43%, S: 34.94%', color: 'Brass yellow', luster: 'Metallic', selected: true },
+  { id: '7', name: 'Bornite', formula: 'Cu5FeS4', density: 5.06, abrasionIndex: 0.10, workIndex: 9.0, class: 'Sulfide', molecularWeight: 501.84, elementalComposition: 'Cu: 63.31%, Fe: 11.13%, S: 25.56%', color: 'Copper red', luster: 'Metallic', selected: false },
+  { id: '10', name: 'Galena', formula: 'PbS', density: 7.58, abrasionIndex: 0.05, workIndex: 8.5, class: 'Sulfide', molecularWeight: 239.27, elementalComposition: 'Pb: 86.60%, S: 13.40%', color: 'Lead grey', luster: 'Metallic', selected: false },
+  { id: '11', name: 'Sphalerite', formula: 'ZnS', density: 4.0, abrasionIndex: 0.18, workIndex: 11.5, class: 'Sulfide', molecularWeight: 97.47, elementalComposition: 'Zn: 67.09%, S: 32.90%', color: 'Yellow, Brown, Black', luster: 'Resinous', selected: false },
+  { id: '12', name: 'Calcite', formula: 'CaCO3', density: 2.71, abrasionIndex: 0.02, workIndex: 5.0, class: 'Carbonate', molecularWeight: 100.09, elementalComposition: 'Ca: 40.04%, C: 12.00%, O: 47.96%', color: 'White, Colorless', luster: 'Vitreous', selected: false },
+  { id: '20', name: 'Gold', formula: 'Au', density: 19.3, abrasionIndex: 0.01, workIndex: 6.0, class: 'Native Element', molecularWeight: 196.97, elementalComposition: 'Au: 100.00%', color: 'Gold yellow', luster: 'Metallic', selected: true },
+];
+
 // --- Stoichiometry Helpers ---
 
 /**

@@ -2,85 +2,28 @@
 
 import React, { useState, useRef, useEffect } from 'react';
 import { 
-  Settings2, 
-  Hammer, 
-  Boxes, 
-  Layers, 
-  Shuffle, 
-  Trash2, 
-  MousePointer2, 
-  ArrowUpRight,
-  Save,
-  RotateCcw,
-  AlertTriangle,
-  X,
-  Edit,
-  MoreHorizontal,
-  Check,
-  Play,
-  Pause,
-  PanelLeft,
-  Search,
-  Beaker,
-  Database,
-  ExternalLink,
-  CheckSquare,
-  Plus,
-  ArrowLeft,
-  Save as SaveIcon,
-  ChevronDown,
-  ChevronUp,
-  Info,
-  Thermometer,
-  Gauge,
-  Scale,
-  Droplets,
-  Waves,
-  Split,
-  Filter,
-  ArrowRight,
-  MousePointer,
-  FileText,
-  Table,
-  Activity,
-  CheckCircle,
-  Calculator,
-  Menu,
-  Tag,
-  FlaskConical,
-  Atom,
-  Square,
-  CheckSquare2
+  Settings2, Hammer, Boxes, Layers, Shuffle, Trash2, MousePointer2, ArrowUpRight,
+  Save, RotateCcw, AlertTriangle, X, Edit, MoreHorizontal, Check, Play, Pause,
+  PanelLeft, Search, Beaker, Database, ExternalLink, CheckSquare, Plus, ArrowLeft,
+  Save as SaveIcon, ChevronDown, ChevronUp, Info, Thermometer, Gauge, Scale,
+  Droplets, Waves, Split, Filter, ArrowRight, MousePointer, FileText, Table,
+  Activity, CheckCircle, Calculator, Menu, Tag, FlaskConical, Atom, Square,
+  CheckSquare2, Terminal, XCircle, AlertCircle, Eraser
 } from 'lucide-react';
 import { 
-  NodeType, 
-  EquipmentConfig, 
-  NodeData, 
-  Connection,
-  Mineral,
-  StreamData
+  NodeType, EquipmentConfig, NodeData, Connection, Mineral, StreamData, LogEntry, LogType
 } from '../types';
 import { solveFlowsheet, SimulationResult } from '../services/flowsheetSolver';
-
-// --- Mock Database (Extended Webmineral.com Data) ---
-const WEBMINERAL_DB: Mineral[] = [
-  { id: '1', name: 'Quartz', formula: 'SiO2', density: 2.65, abrasionIndex: 0.75, workIndex: 13.5, class: 'Silicate', molecularWeight: 60.08, elementalComposition: 'Si: 46.74%, O: 53.26%', color: 'Colorless, White', luster: 'Vitreous', selected: true },
-  { id: '2', name: 'Hematite', formula: 'Fe2O3', density: 5.26, abrasionIndex: 0.30, workIndex: 12.8, class: 'Oxide', molecularWeight: 159.69, elementalComposition: 'Fe: 69.94%, O: 30.06%', color: 'Steel grey, Reddish brown', luster: 'Metallic', selected: false },
-  { id: '3', name: 'Magnetite', formula: 'Fe3O4', density: 5.18, abrasionIndex: 0.25, workIndex: 10.0, class: 'Oxide', molecularWeight: 231.53, elementalComposition: 'Fe: 72.36%, O: 27.64%', color: 'Iron black', luster: 'Metallic', selected: false },
-  { id: '5', name: 'Pyrite', formula: 'FeS2', density: 5.01, abrasionIndex: 0.45, workIndex: 14.0, class: 'Sulfide', molecularWeight: 119.98, elementalComposition: 'Fe: 46.55%, S: 53.45%', color: 'Pale brass yellow', luster: 'Metallic', selected: true },
-  { id: '6', name: 'Chalcopyrite', formula: 'CuFeS2', density: 4.2, abrasionIndex: 0.12, workIndex: 10.5, class: 'Sulfide', molecularWeight: 183.53, elementalComposition: 'Cu: 34.63%, Fe: 30.43%, S: 34.94%', color: 'Brass yellow', luster: 'Metallic', selected: true },
-  { id: '7', name: 'Bornite', formula: 'Cu5FeS4', density: 5.06, abrasionIndex: 0.10, workIndex: 9.0, class: 'Sulfide', molecularWeight: 501.84, elementalComposition: 'Cu: 63.31%, Fe: 11.13%, S: 25.56%', color: 'Copper red', luster: 'Metallic', selected: false },
-  { id: '10', name: 'Galena', formula: 'PbS', density: 7.58, abrasionIndex: 0.05, workIndex: 8.5, class: 'Sulfide', molecularWeight: 239.27, elementalComposition: 'Pb: 86.60%, S: 13.40%', color: 'Lead grey', luster: 'Metallic', selected: false },
-  { id: '11', name: 'Sphalerite', formula: 'ZnS', density: 4.0, abrasionIndex: 0.18, workIndex: 11.5, class: 'Sulfide', molecularWeight: 97.47, elementalComposition: 'Zn: 67.09%, S: 32.90%', color: 'Yellow, Brown, Black', luster: 'Resinous', selected: false },
-  { id: '12', name: 'Calcite', formula: 'CaCO3', density: 2.71, abrasionIndex: 0.02, workIndex: 5.0, class: 'Carbonate', molecularWeight: 100.09, elementalComposition: 'Ca: 40.04%, C: 12.00%, O: 47.96%', color: 'White, Colorless', luster: 'Vitreous', selected: false },
-  { id: '20', name: 'Gold', formula: 'Au', density: 19.3, abrasionIndex: 0.01, workIndex: 6.0, class: 'Native Element', molecularWeight: 196.97, elementalComposition: 'Au: 100.00%', color: 'Gold yellow', luster: 'Metallic', selected: true },
-];
 
 interface ProjectViewProps {
   nodes: NodeData[];
   setNodes: React.Dispatch<React.SetStateAction<NodeData[]>>;
   connections: Connection[];
   setConnections: React.Dispatch<React.SetStateAction<Connection[]>>;
+  minerals: Mineral[];
+  setMinerals: React.Dispatch<React.SetStateAction<Mineral[]>>;
+  logs: LogEntry[];
+  setLogs: React.Dispatch<React.SetStateAction<LogEntry[]>>;
   onSimulationComplete: (results: SimulationResult) => void;
   onNavigateToResults: () => void;
 }
@@ -90,12 +33,7 @@ const EQUIPMENT_CONFIGS: Record<NodeType, EquipmentConfig> = {
     type: 'Feed', icon: ArrowRight, label: 'Feed', color: 'bg-transparent border-0',
     inputs: [],
     outputs: [{ id: 'out', type: 'output', label: 'Stream' }],
-    defaultParameters: { 
-        solidsTph: 100, 
-        percentSolids: 60, 
-        sg: 2.7, 
-        description: 'Fresh Feed' 
-    }
+    defaultParameters: { solidsTph: 100, percentSolids: 60, sg: 2.7, description: 'Fresh Feed' }
   },
   'Product': {
     type: 'Product', icon: ArrowRight, label: 'Product', color: 'bg-transparent border-0',
@@ -163,6 +101,10 @@ export const ProjectView: React.FC<ProjectViewProps> = ({
   setNodes, 
   connections, 
   setConnections,
+  minerals,
+  setMinerals,
+  logs,
+  setLogs,
   onSimulationComplete,
   onNavigateToResults
 }) => {
@@ -170,13 +112,11 @@ export const ProjectView: React.FC<ProjectViewProps> = ({
   const [showSidebar, setShowSidebar] = useState(true);
   const [simState, setSimState] = useState<'idle' | 'running' | 'paused' | 'success'>('idle');
   const [activeTool, setActiveTool] = useState<'pointer' | 'stream'>('pointer');
-  const [diagnostics, setDiagnostics] = useState<string[]>([]);
+  const [showClearConfirm, setShowClearConfirm] = useState(false);
+  const [isLogOpen, setIsLogOpen] = useState(true);
   
   // Interaction State
   const [draggingNode, setDraggingNode] = useState<{id: string, offsetX: number, offsetY: number} | null>(null);
-  const [activeItem, setActiveItem] = useState<{ id: string; type: 'node' | 'connection'; x: number; y: number; data?: any; } | null>(null);
-  
-  // Context Menu State
   const [contextMenu, setContextMenu] = useState<{ x: number; y: number; type: 'node' | 'connection'; id: string } | null>(null);
 
   // Connection Drawing State
@@ -186,23 +126,35 @@ export const ProjectView: React.FC<ProjectViewProps> = ({
       startX: number; 
       startY: number; 
       currX: number; 
-      currY: number; 
+      currY: number;
+      autoCreatedOrigin?: boolean; 
   } | null>(null);
 
   // Modals State
   const [editModalOpen, setEditModalOpen] = useState(false);
   const [editFormData, setEditFormData] = useState<Record<string, any>>({});
-  const [editLabel, setEditLabel] = useState(''); // Separate state for Label editing
-  const [showClearModal, setShowClearModal] = useState(false);
-  
-  // Mineral State
+  const [editLabel, setEditLabel] = useState(''); 
+  const [editId, setEditId] = useState<string>('');
+  const [editType, setEditType] = useState<'node' | 'connection'>('node');
+
   const [showMineralModal, setShowMineralModal] = useState(false);
-  const [minerals, setMinerals] = useState<Mineral[]>(WEBMINERAL_DB);
   const [mineralSearch, setMineralSearch] = useState('');
   const [mineralViewMode, setMineralViewMode] = useState<'list' | 'edit'>('list');
   const [currentMineral, setCurrentMineral] = useState<Partial<Mineral>>({});
 
   const canvasRef = useRef<HTMLDivElement>(null);
+  const logEndRef = useRef<HTMLDivElement>(null);
+
+  // --- Logger Function ---
+  const addLog = (message: string, type: LogType = 'info') => {
+    const newLog: LogEntry = {
+      id: Date.now(),
+      timestamp: new Date().toLocaleTimeString('pt-BR', { hour12: false }),
+      type,
+      message
+    };
+    setLogs(prev => [newLog, ...prev]); // Newest first
+  };
 
   // Close context menu on global click
   useEffect(() => {
@@ -210,6 +162,25 @@ export const ProjectView: React.FC<ProjectViewProps> = ({
     document.addEventListener('click', handleClick);
     return () => document.removeEventListener('click', handleClick);
   }, []);
+
+  // Global Mouse Up Handler for Clean Stream Cancellation
+  useEffect(() => {
+    const handleGlobalMouseUp = () => {
+        if (drawingLine) {
+            // If we are drawing a line and mouse up happens globally (e.g. outside canvas)
+            // AND it was an auto-created feed node (via Stream Tool), clean it up.
+            if (drawingLine.autoCreatedOrigin) {
+                 setNodes(prev => prev.filter(n => n.id !== drawingLine.fromNode));
+                 addLog('Criação de corrente cancelada.', 'info');
+            }
+            setDrawingLine(null);
+        }
+        setDraggingNode(null);
+    };
+
+    window.addEventListener('mouseup', handleGlobalMouseUp);
+    return () => window.removeEventListener('mouseup', handleGlobalMouseUp);
+  }, [drawingLine, setNodes]);
 
   // --- Mineral CRUD Logic ---
   const handleEditMineral = (mineral: Mineral) => {
@@ -241,8 +212,10 @@ export const ProjectView: React.FC<ProjectViewProps> = ({
     setMinerals(prev => {
       const exists = prev.find(m => m.id === currentMineral.id);
       if (exists) {
+        addLog(`Mineral '${currentMineral.name}' atualizado.`, 'success');
         return prev.map(m => m.id === currentMineral.id ? currentMineral as Mineral : m);
       } else {
+        addLog(`Novo mineral '${currentMineral.name}' criado.`, 'success');
         return [...prev, currentMineral as Mineral];
       }
     });
@@ -252,6 +225,7 @@ export const ProjectView: React.FC<ProjectViewProps> = ({
   const handleDeleteMineral = (id: string) => {
     if (confirm('Tem certeza que deseja remover este mineral da base de dados?')) {
       setMinerals(prev => prev.filter(m => m.id !== id));
+      addLog('Mineral removido da base de dados.', 'warning');
     }
   };
 
@@ -263,20 +237,24 @@ export const ProjectView: React.FC<ProjectViewProps> = ({
   // --- Simulation Logic ---
   const handleRunSimulation = () => {
       setSimState('running');
-      setDiagnostics([]);
+      addLog('Iniciando simulação...', 'info');
       
       setTimeout(() => {
           try {
-              // Pass minerals DB to solver so it can calculate assays from mineral grades
+              // Pass minerals DB to solver
               const result = solveFlowsheet(nodes, connections, minerals);
               
               if (result.diagnostics.length > 0) {
+                 result.diagnostics.forEach(diag => {
+                    const type = diag.includes('ERRO') ? 'error' : 'warning';
+                    addLog(diag, type);
+                 });
+              }
+
+              if (!result.converged && result.error === 100) {
                  setSimState('idle');
-                 setDiagnostics(result.diagnostics);
-                 
-                 if (!result.converged && result.error === 100) {
-                     return; 
-                 }
+                 addLog('Simulação abortada devido a erros de validação.', 'error');
+                 return; 
               }
 
               const updatedConnections = connections.map(c => ({
@@ -289,21 +267,35 @@ export const ProjectView: React.FC<ProjectViewProps> = ({
 
               if (result.converged && result.error < 1) {
                   setSimState('success');
+                  addLog(`Simulação concluída com sucesso! Erro global: ${result.error.toFixed(4)}%`, 'success');
+                  addLog(`Iterações: ${result.iterations}`, 'info');
                   setTimeout(() => setSimState('idle'), 5000); 
               } else {
                   setSimState('idle');
+                  addLog(`Simulação finalizada com aviso. Erro de fechamento: ${result.error.toFixed(2)}%`, 'warning');
               }
 
           } catch (e) {
               console.error(e);
               setSimState('idle');
-              setDiagnostics(['Erro interno na simulação.']);
+              addLog('Erro crítico interno no motor de simulação.', 'error');
           }
       }, 500); 
   };
 
-  // --- Helpers ---
+  const handleClearFlowsheetRequest = () => {
+      setShowClearConfirm(true);
+  };
 
+  const handleConfirmClear = () => {
+      setNodes([]);
+      setConnections([]);
+      addLog('Fluxograma limpo pelo usuário.', 'warning');
+      setSimState('idle');
+      setShowClearConfirm(false);
+  };
+
+  // --- Helpers ---
   const getAbsolutePortPosition = (nodeId: string, portId: string) => {
     const node = nodes.find(n => n.id === nodeId);
     if (!node) return null;
@@ -323,873 +315,778 @@ export const ProjectView: React.FC<ProjectViewProps> = ({
     }
 
     const inputIndex = config.inputs.findIndex(p => p.id === portId);
-    if (inputIndex !== -1) {
+    if (inputIndex >= 0) {
+        const spacing = height / (config.inputs.length + 1);
         return {
-            x: node.x, 
-            y: node.y + (height * ((inputIndex + 1) / (config.inputs.length + 1)))
+            x: node.x,
+            y: node.y + spacing * (inputIndex + 1)
         };
     }
 
     const outputIndex = config.outputs.findIndex(p => p.id === portId);
-    if (outputIndex !== -1) {
+    if (outputIndex >= 0) {
+        const spacing = height / (config.outputs.length + 1);
         return {
-            x: node.x + width, 
-            y: node.y + (height * ((outputIndex + 1) / (config.outputs.length + 1)))
+            x: node.x + width,
+            y: node.y + spacing * (outputIndex + 1)
         };
     }
+
     return null;
   };
 
-  const getPath = (x1: number, y1: number, x2: number, y2: number) => {
-     if (isNaN(x1) || isNaN(y1) || isNaN(x2) || isNaN(y2)) return '';
-     const midX = (x1 + x2) / 2;
-     return `M ${x1} ${y1} L ${midX} ${y1} L ${midX} ${y2} L ${x2} ${y2}`;
-  };
-
-  // --- Event Handlers ---
-
-  const handleDragStart = (e: React.DragEvent<HTMLDivElement>, type: string) => {
-    if (activeTool !== 'pointer') {
-      e.preventDefault();
-      return;
-    }
-    e.dataTransfer.setData('application/reactflow', type);
-    e.dataTransfer.effectAllowed = 'move';
-  };
-
-  const handleDrop = (e: React.DragEvent<HTMLDivElement>) => {
-    e.preventDefault();
-    if (!canvasRef.current) return;
-    const type = e.dataTransfer.getData('application/reactflow') as NodeType;
-    // @ts-ignore
-    if (!type || !EQUIPMENT_CONFIGS[type]) return;
-    const bounds = canvasRef.current.getBoundingClientRect();
-    const width = (type === 'Feed' || type === 'Product') ? COMPACT_NODE_WIDTH : NODE_WIDTH;
-    const height = (type === 'Feed' || type === 'Product') ? COMPACT_NODE_HEIGHT : NODE_HEIGHT;
-    
+  const addNode = (type: NodeType, x: number, y: number) => {
     const newNode: NodeData = {
-      id: `node_${Date.now()}`,
+      id: `${type}_${Date.now()}`,
       type,
-      x: e.clientX - bounds.left - (width / 2),
-      y: e.clientY - bounds.top - (height / 2),
-      label: type === 'Feed' ? 'Feed' : (type === 'Product' ? 'Product' : type),
-      // @ts-ignore
+      x,
+      y,
+      label: EQUIPMENT_CONFIGS[type].label,
       parameters: { ...EQUIPMENT_CONFIGS[type].defaultParameters }
     };
-    setNodes((nds) => [...nds, newNode]);
+    setNodes(prev => [...prev, newNode]);
+    addLog(`Adicionado equipamento: ${newNode.label}`, 'info');
+    return newNode;
   };
 
-  const handleDragOver = (e: React.DragEvent<HTMLDivElement>) => { e.preventDefault(); e.dataTransfer.dropEffect = 'move'; };
+  // --- Handlers ---
+  const handleMouseDown = (e: React.MouseEvent, type: 'node' | 'port' | 'canvas', id?: string, portId?: string) => {
+    // Only allow drag/draw on Left Click. Right click (button 2) is for context menu.
+    if (e.button !== 0) return;
 
-  // -- Canvas Interaction --
+    e.stopPropagation();
+    e.preventDefault();
 
-  const onCanvasMouseDown = (e: React.MouseEvent) => {
-     if (e.button !== 0) return;
-     setActiveItem(null);
+    if (activeTool === 'stream') {
+        const rect = canvasRef.current?.getBoundingClientRect();
+        if (!rect) return;
+        const x = e.clientX - rect.left;
+        const y = e.clientY - rect.top;
 
-     if (activeTool === 'stream') {
-         if (!canvasRef.current) return;
-         const bounds = canvasRef.current.getBoundingClientRect();
-         const mouseX = e.clientX - bounds.left;
-         const mouseY = e.clientY - bounds.top;
+        // If clicking on a port, start drawing from there
+        if (type === 'port' && id && portId) {
+            setDrawingLine({
+                fromNode: id,
+                fromPort: portId,
+                startX: x, 
+                startY: y,
+                currX: x,
+                currY: y
+            });
+            return;
+        }
+        
+        // If clicking on canvas, create a FEED node and start drawing
+        if (type === 'canvas') {
+            const feedNode = addNode('Feed', x - COMPACT_NODE_WIDTH/2, y - COMPACT_NODE_HEIGHT/2);
+            setDrawingLine({
+                fromNode: feedNode.id,
+                fromPort: 'out',
+                startX: x,
+                startY: y,
+                currX: x,
+                currY: y,
+                autoCreatedOrigin: true // Mark as auto-created
+            });
+            return;
+        }
+    }
 
-         const newNodeId = `node_feed_${Date.now()}`;
-         const newNode: NodeData = {
-             id: newNodeId,
-             type: 'Feed',
-             x: mouseX - (COMPACT_NODE_WIDTH / 2),
-             y: mouseY - (COMPACT_NODE_HEIGHT / 2),
-             label: 'Feed',
-             parameters: { ...EQUIPMENT_CONFIGS['Feed'].defaultParameters }
-         };
-         
-         setNodes(prev => [...prev, newNode]);
-         
-         const portX = mouseX;
-         const portY = mouseY;
-         
-         setDrawingLine({
-             fromNode: newNodeId,
-             fromPort: 'out',
-             startX: portX,
-             startY: portY,
-             currX: mouseX,
-             currY: mouseY
-         });
-     }
+    if (activeTool === 'pointer' && type === 'node' && id) {
+        const rect = canvasRef.current?.getBoundingClientRect();
+        if (!rect) return;
+        
+        const node = nodes.find(n => n.id === id);
+        if (node) {
+            setDraggingNode({
+                id,
+                offsetX: e.clientX - rect.left - node.x,
+                offsetY: e.clientY - rect.top - node.y
+            });
+        }
+    }
   };
 
-  const onCanvasMouseMove = (e: React.MouseEvent) => {
-    if (!canvasRef.current) return;
-    const bounds = canvasRef.current.getBoundingClientRect();
-    const mouseX = e.clientX - bounds.left;
-    const mouseY = e.clientY - bounds.top;
+  const handleMouseMove = (e: React.MouseEvent) => {
+    const rect = canvasRef.current?.getBoundingClientRect();
+    if (!rect) return;
+    const x = e.clientX - rect.left;
+    const y = e.clientY - rect.top;
 
     if (draggingNode) {
-        setNodes(nds => nds.map(n => n.id === draggingNode.id ? { ...n, x: mouseX - draggingNode.offsetX, y: mouseY - draggingNode.offsetY } : n));
-        return;
+        setNodes(prev => prev.map(n => 
+            n.id === draggingNode.id ? { ...n, x: x - draggingNode.offsetX, y: y - draggingNode.offsetY } : n
+        ));
     }
 
     if (drawingLine) {
-        setDrawingLine(prev => prev ? { ...prev, currX: mouseX, currY: mouseY } : null);
+        setDrawingLine(prev => prev ? { ...prev, currX: x, currY: y } : null);
     }
   };
 
-  const onCanvasMouseUp = (e: React.MouseEvent) => {
-      setDraggingNode(null);
+  const handleMouseUp = (e: React.MouseEvent, type: 'port' | 'canvas', nodeId?: string, portId?: string) => {
+    e.stopPropagation(); // Stop propagation to window handler if handled here
+    setDraggingNode(null);
 
-      if (activeTool === 'stream' && drawingLine) {
-          if (!canvasRef.current) return;
-          const bounds = canvasRef.current.getBoundingClientRect();
-          const mouseX = e.clientX - bounds.left;
-          const mouseY = e.clientY - bounds.top;
-          
-          const dist = Math.sqrt(Math.pow(mouseX - drawingLine.startX, 2) + Math.pow(mouseY - drawingLine.startY, 2));
-          if (dist < 10) {
-              setDrawingLine(null);
-              return;
-          }
+    if (drawingLine) {
+        // Successful connection
+        if (type === 'port' && nodeId && portId && nodeId !== drawingLine.fromNode) {
+            const newConn: Connection = {
+                id: `stream_${Date.now()}`,
+                fromNode: drawingLine.fromNode,
+                fromPort: drawingLine.fromPort,
+                toNode: nodeId,
+                toPort: portId,
+                parameters: { solidsTph: 0, percentSolids: 0 }
+            };
+            setConnections(prev => [...prev, newConn]);
+            addLog('Nova conexão criada.', 'info');
+        } 
+        // Create Product Node on drop in empty space
+        else if (type === 'canvas') {
+             const rect = canvasRef.current?.getBoundingClientRect();
+             if (rect) {
+                const x = e.clientX - rect.left;
+                const y = e.clientY - rect.top;
+                const prodNode = addNode('Product', x - COMPACT_NODE_WIDTH/2, y - COMPACT_NODE_HEIGHT/2);
+                
+                const newConn: Connection = {
+                    id: `stream_${Date.now()}`,
+                    fromNode: drawingLine.fromNode,
+                    fromPort: drawingLine.fromPort,
+                    toNode: prodNode.id,
+                    toPort: 'in',
+                    parameters: { solidsTph: 0, percentSolids: 0 }
+                };
+                setConnections(prev => [...prev, newConn]);
+                addLog('Nova conexão (Produto) criada.', 'info');
+             }
+        }
+        // CLEANUP: If invalid drop and origin was auto-created, remove the orphan Feed node
+        else if (drawingLine.autoCreatedOrigin) {
+             setNodes(prev => prev.filter(n => n.id !== drawingLine.fromNode));
+        }
 
-          const newNodeId = `node_prod_${Date.now()}`;
-          const newNode: NodeData = {
-              id: newNodeId,
-              type: 'Product',
-              x: mouseX - (COMPACT_NODE_WIDTH / 2),
-              y: mouseY - (COMPACT_NODE_HEIGHT / 2),
-              label: 'Product',
-              parameters: { ...EQUIPMENT_CONFIGS['Product'].defaultParameters }
-          };
-          
-          setNodes(prev => [...prev, newNode]);
-          
-          const newConn: Connection = {
-              id: `conn_${Date.now()}`,
-              label: `Stream ${connections.length + 1}`,
-              fromNode: drawingLine.fromNode,
-              fromPort: drawingLine.fromPort,
-              toNode: newNodeId,
-              toPort: 'in',
-              parameters: { volumetricFlow: 0, percentSolids: 0 }
-          };
-          
-          setConnections(prev => [...prev, newConn]);
-          setDrawingLine(null);
-      }
-      
-      if (drawingLine && activeTool !== 'stream') {
-          setDrawingLine(null);
-      }
+        setDrawingLine(null);
+    }
   };
 
-  // -- Port Interaction --
-
-  const onPortMouseDown = (e: React.MouseEvent, nodeId: string, portId: string) => {
-      e.stopPropagation();
-      if (e.button !== 0) return; // Left click only
-      
-      const pos = getAbsolutePortPosition(nodeId, portId);
-      if (pos) {
-          setDrawingLine({
-              fromNode: nodeId,
-              fromPort: portId,
-              startX: pos.x,
-              startY: pos.y,
-              currX: pos.x,
-              currY: pos.y
-          });
-      }
-  };
-
-  const onPortMouseUp = (e: React.MouseEvent, nodeId: string, portId: string) => {
-      e.stopPropagation();
-      
-      if (drawingLine) {
-          if (drawingLine.fromNode === nodeId && drawingLine.fromPort === portId) {
-              setDrawingLine(null);
-              return;
-          }
-          
-          const newConn: Connection = {
-              id: `conn_${Date.now()}`,
-              label: `Stream ${connections.length + 1}`,
-              fromNode: drawingLine.fromNode,
-              fromPort: drawingLine.fromPort,
-              toNode: nodeId,
-              toPort: portId,
-              parameters: { volumetricFlow: 0, percentSolids: 0 }
-          };
-
-          setConnections(prev => [...prev, newConn]);
-          setDrawingLine(null);
-      }
-  };
-
-  const onNodeMouseDown = (e: React.MouseEvent, nodeId: string) => {
-      e.stopPropagation();
-      if (e.button !== 0) return; 
-
-      if (activeTool === 'pointer') {
-        setDraggingNode({ id: nodeId, offsetX: e.nativeEvent.offsetX, offsetY: e.nativeEvent.offsetY });
-        setActiveItem(null);
-      }
-  };
-
-  // -- Context Menu Logic --
   const handleContextMenu = (e: React.MouseEvent, type: 'node' | 'connection', id: string) => {
       e.preventDefault();
       e.stopPropagation();
-      setContextMenu({
-          x: e.clientX,
-          y: e.clientY,
-          type,
-          id
-      });
-      const item = type === 'node' 
-          ? nodes.find(n => n.id === id) 
-          : connections.find(c => c.id === id);
-      if (item) {
-           // @ts-ignore
-           setActiveItem({ id, type, x: 0, y: 0, data: item });
-      }
+      const rect = canvasRef.current?.getBoundingClientRect();
+      if (!rect) return;
+      // Coordinates relative to viewport for fixed positioning context menu
+      setContextMenu({ x: e.clientX, y: e.clientY, type, id });
   };
 
-  // --- Edit Logic ---
-  const handleOpenEditModal = (item?: { id: string; type: 'node' | 'connection'; data?: any }) => {
-    const target = item || (contextMenu ? { id: contextMenu.id, type: contextMenu.type } : activeItem);
-    if (!target) return;
-    
-    // Resolve data if missing
-    let data = target.data;
-    if (!data) {
-        if (target.type === 'node') data = nodes.find(n => n.id === target.id);
-        else data = connections.find(c => c.id === target.id);
-    }
-
-    // Populate Form Data (with potential simulation results)
-    let formData = { ...(data?.parameters || {}) };
-
-    // If this connection has calculation results, pre-fill the fields for display
-    // This addresses the user request to "complement information of subsequent streams"
-    if (target.type === 'connection' && data?.streamState) {
-        const s = data.streamState as StreamData;
-        
-        // Fill basic props
-        if (s.solidsTph !== undefined) formData.solidsTph = s.solidsTph.toFixed(2);
-        if (s.percentSolids !== undefined) formData.percentSolids = s.percentSolids.toFixed(2);
-        if (s.totalTph !== undefined && s.slurryDensity > 0) {
-             formData.volumetricFlow = (s.totalTph / s.slurryDensity).toFixed(2);
-        }
-
-        // Fill minerals (Convert Mass back to %)
-        if (s.mineralFlows && s.solidsTph > 0) {
-             Object.entries(s.mineralFlows).forEach(([minId, mass]) => {
-                 const pct = (mass / s.solidsTph) * 100;
-                 formData[`mineral_${minId}`] = pct.toFixed(2);
-             });
-        }
-    }
-
-    setActiveItem({ id: target.id, type: target.type as 'node'|'connection', x: 0, y: 0, data });
-    setEditFormData(formData);
-    setEditLabel(target.type === 'connection' ? (data.label || '') : (data.label || ''));
-    setEditModalOpen(true);
-    setContextMenu(null);
-  };
-
-  const handleSaveEditModal = () => {
-      if (!activeItem) return;
-      if (activeItem.type === 'node') {
-          setNodes(nds => nds.map(n => n.id === activeItem.id ? { ...n, parameters: editFormData, label: editLabel || n.label } : n));
+  const deleteItem = () => {
+      if (!contextMenu) return;
+      if (contextMenu.type === 'node') {
+          const node = nodes.find(n => n.id === contextMenu.id);
+          setNodes(prev => prev.filter(n => n.id !== contextMenu.id));
+          setConnections(prev => prev.filter(c => c.fromNode !== contextMenu.id && c.toNode !== contextMenu.id));
+          addLog(`Equipamento '${node?.label}' deletado.`, 'warning');
       } else {
-          setConnections(c => c.map(x => x.id === activeItem.id ? { ...x, parameters: editFormData, label: editLabel || x.label } : x));
+          setConnections(prev => prev.filter(c => c.id !== contextMenu.id));
+          addLog('Conexão deletada.', 'warning');
+      }
+      setContextMenu(null);
+  };
+
+  const openEditModal = (type: 'node' | 'connection', id: string) => {
+      if (type === 'node') {
+          const node = nodes.find(n => n.id === id);
+          if (node) {
+              setEditType('node');
+              setEditId(id);
+              setEditLabel(node.label);
+              setEditFormData({ ...node.parameters });
+              setEditModalOpen(true);
+          }
+      } else {
+          const conn = connections.find(c => c.id === id);
+          if (conn) {
+              setEditType('connection');
+              setEditId(id);
+              setEditLabel(conn.label || 'Stream');
+              
+              // If simulation results exist for this stream, populate form with calculated values
+              // Otherwise use parameters
+              if (conn.streamState && conn.streamState.totalTph > 0) {
+                  setEditFormData({ 
+                      ...conn.parameters,
+                      _calculated: conn.streamState // Pass full state to visualize
+                  });
+              } else {
+                  setEditFormData({ ...conn.parameters });
+              }
+              setEditModalOpen(true);
+          }
+      }
+      setContextMenu(null);
+  };
+
+  const saveEditForm = () => {
+      if (editType === 'node') {
+          setNodes(prev => prev.map(n => n.id === editId ? { ...n, label: editLabel, parameters: { ...editFormData } } : n));
+          addLog(`Parâmetros de '${editLabel}' atualizados.`, 'success');
+      } else {
+          setConnections(prev => prev.map(c => c.id === editId ? { ...c, label: editLabel, parameters: { ...editFormData } } : c));
+          addLog(`Parâmetros da corrente '${editLabel}' atualizados.`, 'success');
       }
       setEditModalOpen(false);
-      setActiveItem(null);
   };
 
-  const handleDeleteItem = (id: string, type: 'node' | 'connection') => {
-    if (type === 'node') {
-        setNodes(n => n.filter(x => x.id !== id));
-        setConnections(c => c.filter(x => x.fromNode !== id && x.toNode !== id));
-    } else {
-        setConnections(c => c.filter(x => x.id !== id));
-    }
-    setContextMenu(null);
-    setEditModalOpen(false);
-    setActiveItem(null);
+  const handleFormChange = (key: string, value: any) => {
+      setEditFormData(prev => ({ ...prev, [key]: value }));
   };
+
+  // --- Render Helpers ---
+  const renderConnection = (conn: Connection) => {
+      const start = getAbsolutePortPosition(conn.fromNode!, conn.fromPort!);
+      const end = getAbsolutePortPosition(conn.toNode!, conn.toPort!);
+      if (!start || !end) return null;
+
+      // Bezier Curve
+      const dist = Math.abs(end.x - start.x);
+      const cp1 = { x: start.x + dist * 0.5, y: start.y };
+      const cp2 = { x: end.x - dist * 0.5, y: end.y };
+      const path = `M ${start.x} ${start.y} C ${cp1.x} ${cp1.y} ${cp2.x} ${cp2.y} ${end.x} ${end.y}`;
+
+      const isSelected = activeItem?.id === conn.id;
+
+      return (
+          <g key={conn.id} 
+             onContextMenu={(e) => handleContextMenu(e, 'connection', conn.id)}
+             onClick={() => openEditModal('connection', conn.id)}
+             className="cursor-pointer group"
+          >
+              <path d={path} stroke="transparent" strokeWidth={15} fill="none" />
+              <path d={path} 
+                    stroke={isSelected ? '#f97316' : '#64748b'} 
+                    strokeWidth={isSelected ? 4 : 2} 
+                    fill="none" 
+                    className="transition-colors duration-200 group-hover:stroke-orange-400"
+              />
+              {/* Arrow Head */}
+              <circle cx={end.x} cy={end.y} r={4} fill={isSelected ? '#f97316' : '#64748b'} />
+              
+              {/* Label Badge */}
+              <foreignObject x={(start.x + end.x)/2 - 20} y={(start.y + end.y)/2 - 10} width={40} height={20}>
+                  <div className="bg-white border border-slate-200 text-[10px] text-center rounded text-slate-600 shadow-sm leading-tight">
+                      {conn.label || 'S'}
+                  </div>
+              </foreignObject>
+          </g>
+      );
+  };
+
+  // Helper for identifying active item for selection highlighting (implied)
+  const activeItem = contextMenu; 
 
   return (
-    <div className="h-[calc(100vh-8rem)] flex flex-col gap-4 relative">
+    <div className="h-[calc(100vh-80px)] flex flex-col relative overflow-hidden bg-slate-50">
       {/* Toolbar */}
-      <header className="bg-white p-3 rounded-xl shadow-sm border border-slate-200 flex items-center justify-between select-none">
-        <div className="flex items-center space-x-2">
-            <button onClick={() => setShowSidebar(!showSidebar)} className={`p-2 rounded-lg transition-colors ${showSidebar ? 'bg-slate-100 text-slate-900' : 'text-slate-500 hover:bg-slate-50'}`}>
-                <PanelLeft className="w-5 h-5" />
+      <div className="h-14 bg-white border-b border-slate-200 flex items-center justify-between px-4 z-10 shadow-sm shrink-0">
+         <div className="flex items-center space-x-2">
+            <button 
+                onClick={() => setActiveTool('pointer')}
+                className={`p-2 rounded-lg transition-colors ${activeTool === 'pointer' ? 'bg-orange-100 text-orange-600' : 'text-slate-500 hover:bg-slate-100'}`}
+                title="Select / Move"
+            >
+                <MousePointer2 className="w-5 h-5" />
             </button>
-            <div className="h-6 w-px bg-slate-200 mx-2"></div>
-            <button onClick={() => { setShowMineralModal(true); setMineralSearch(''); setMineralViewMode('list'); }} className="px-3 py-2 bg-white border border-slate-200 rounded-lg flex items-center text-sm font-medium text-slate-700 hover:bg-slate-50 hover:border-purple-300 transition-all">
-                <Beaker className="w-4 h-4 mr-2 text-purple-600" /> Components
+            <button 
+                onClick={() => setActiveTool('stream')}
+                className={`p-2 rounded-lg transition-colors ${activeTool === 'stream' ? 'bg-orange-100 text-orange-600' : 'text-slate-500 hover:bg-slate-100'}`}
+                title="Create Stream (Click on port or canvas)"
+            >
+                <Waves className="w-5 h-5" />
             </button>
             <div className="h-6 w-px bg-slate-200 mx-2"></div>
             <button 
-                onClick={handleRunSimulation}
-                disabled={simState === 'running'} 
-                className={`px-4 py-2 rounded-lg flex items-center font-bold text-sm transition-all shadow-sm ${simState === 'running' ? 'bg-green-100 text-green-700 ring-2 ring-green-500 ring-offset-1' : (simState === 'success' ? 'bg-green-500 text-white' : 'bg-white border border-slate-200 text-slate-700 hover:bg-green-50 hover:text-green-700')}`}
+                onClick={() => setShowMineralModal(true)}
+                className="flex items-center px-3 py-1.5 bg-slate-100 text-slate-700 rounded-lg hover:bg-slate-200 text-sm font-medium"
             >
-                {simState === 'running' && <Activity className="w-4 h-4 mr-2 animate-spin" />}
-                {simState === 'success' && <CheckCircle className="w-4 h-4 mr-2" />}
-                {simState === 'idle' && <Play className="w-4 h-4 mr-2" />}
-                {simState === 'running' ? 'Calculando Balanço...' : (simState === 'success' ? 'Simulado' : 'Simulate')}
+                <Database className="w-4 h-4 mr-2" />
+                Minerais
             </button>
-            
-            {simState === 'success' && (
-                <button onClick={onNavigateToResults} className="px-3 py-2 bg-blue-50 text-blue-700 font-medium rounded-lg hover:bg-blue-100 text-sm flex items-center animate-in fade-in">
-                    Ver Resultados <ArrowRight className="w-3 h-3 ml-1" />
-                </button>
-            )}
-        </div>
-        <div className="flex items-center space-x-2">
-            <button onClick={() => setShowClearModal(true)} className="p-2 text-slate-400 hover:text-red-600 hover:bg-red-50 rounded-lg"><Trash2 className="w-5 h-5" /></button>
-        </div>
-      </header>
+         </div>
 
-      {/* Validation Diagnostics */}
-      {diagnostics.length > 0 && (
-          <div className="bg-red-50 border border-red-200 rounded-lg p-3 flex items-start animate-in fade-in slide-in-from-top-2">
-              <AlertTriangle className="w-5 h-5 text-red-600 mr-3 flex-shrink-0 mt-0.5" />
-              <div>
-                  <h4 className="text-sm font-bold text-red-800">Alerta de Simulação</h4>
-                  <ul className="list-disc list-inside text-sm text-red-700 mt-1">
-                      {diagnostics.map((d, i) => <li key={i}>{d}</li>)}
-                  </ul>
-              </div>
-              <button onClick={() => setDiagnostics([])} className="ml-auto text-red-400 hover:text-red-600"><X className="w-4 h-4" /></button>
-          </div>
-      )}
+         <div className="flex items-center space-x-3">
+             <button 
+                type="button"
+                onClick={handleClearFlowsheetRequest}
+                className="flex items-center justify-center p-2 text-slate-500 hover:text-red-600 hover:bg-red-50 rounded-lg transition-colors"
+                title="Clear Flowsheet"
+             >
+                <Trash2 className="w-5 h-5" />
+             </button>
+             
+             <div className="h-6 w-px bg-slate-200 mx-1"></div>
 
-      <div className="flex-1 flex bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden select-none relative">
-        {/* Sidebar */}
-        <div className={`bg-slate-50 border-r border-slate-200 flex flex-col z-20 transition-all duration-300 ${showSidebar ? 'w-64 opacity-100' : 'w-0 opacity-0 border-none overflow-hidden'}`}>
-           <div className="p-4 border-b border-slate-200">
-              <div className="flex space-x-2 bg-slate-200 p-1 rounded-lg mb-4">
-                  <button 
-                    onClick={() => setActiveTool('pointer')}
-                    className={`flex-1 flex items-center justify-center py-1.5 rounded-md text-sm font-medium transition-all ${activeTool === 'pointer' ? 'bg-white shadow text-slate-900' : 'text-slate-500 hover:text-slate-700'}`}
-                  >
-                      <MousePointer2 className="w-4 h-4 mr-1.5" /> Select
-                  </button>
-                  <button 
-                    onClick={() => setActiveTool('stream')}
-                    className={`flex-1 flex items-center justify-center py-1.5 rounded-md text-sm font-medium transition-all ${activeTool === 'stream' ? 'bg-white shadow text-blue-600' : 'text-slate-500 hover:text-slate-700'}`}
-                  >
-                      <Waves className="w-4 h-4 mr-1.5" /> Stream
-                  </button>
-              </div>
-              <h3 className="text-xs font-bold text-slate-500 uppercase tracking-wider">Equipamentos</h3>
-           </div>
-           <div className="flex-1 p-4 overflow-y-auto">
-               <div className="space-y-3">
-                {Object.values(EQUIPMENT_CONFIGS)
-                  .filter(item => item.type !== 'Feed' && item.type !== 'Product')
-                  .map((item) => (
-                    <div key={item.type} onDragStart={(e) => handleDragStart(e, item.type)} draggable={activeTool === 'pointer'} className={`flex items-center p-3 rounded-lg border-2 border-dashed border-slate-300 bg-white transition-all ${activeTool === 'pointer' ? 'cursor-move hover:border-blue-400 hover:shadow-md' : 'opacity-50 cursor-not-allowed'}`}>
-                        <item.icon className="w-5 h-5 text-slate-500 mr-3" /> <span className="text-slate-700 font-medium">{item.label}</span>
-                    </div>
-                ))}
-               </div>
-           </div>
-        </div>
+             {/* Diagnostics Indicator moved to logs */}
+             
+             <button 
+                onClick={handleRunSimulation}
+                disabled={simState === 'running'}
+                className={`flex items-center px-4 py-2 rounded-lg font-bold text-white shadow-md transition-all ${
+                    simState === 'running' ? 'bg-slate-400 cursor-not-allowed' :
+                    simState === 'success' ? 'bg-green-600 hover:bg-green-700' :
+                    'bg-orange-600 hover:bg-orange-700'
+                }`}
+             >
+                 {simState === 'running' ? (
+                     <><div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin mr-2"></div> Running...</>
+                 ) : simState === 'success' ? (
+                     <><Check className="w-4 h-4 mr-2" /> Converged</>
+                 ) : (
+                     <><Play className="w-4 h-4 mr-2" /> Run Simulation</>
+                 )}
+             </button>
+             
+             {simState === 'success' && (
+                 <button 
+                    onClick={onNavigateToResults}
+                    className="flex items-center px-4 py-2 bg-blue-600 text-white rounded-lg font-bold hover:bg-blue-700 shadow-md animate-in fade-in slide-in-from-right-4"
+                 >
+                     View Report <ArrowRight className="w-4 h-4 ml-2" />
+                 </button>
+             )}
+         </div>
+      </div>
 
-        {/* Main Canvas */}
-        <div 
-            className={`flex-1 relative bg-slate-50 overflow-hidden ${activeTool === 'stream' ? 'cursor-crosshair' : 'cursor-default'}`} 
-            ref={canvasRef} 
-            onMouseDown={onCanvasMouseDown} 
-            onMouseMove={onCanvasMouseMove}
-            onMouseUp={onCanvasMouseUp}
-            onContextMenu={(e) => e.preventDefault()} 
-        >
-            <div className="absolute inset-0 pointer-events-none opacity-10" style={{ backgroundImage: 'radial-gradient(#64748b 1px, transparent 1px)', backgroundSize: '20px 20px' }}></div>
-            
-            <div className="absolute inset-0 w-full h-full" onDrop={handleDrop} onDragOver={handleDragOver}>
-                
-                {/* Layer 1: Connections */}
-                <svg className="absolute inset-0 w-full h-full pointer-events-none z-0 overflow-visible">
-                    <defs>
-                        <marker id="arrowhead" markerWidth="10" markerHeight="7" refX="9" refY="3.5" orient="auto"><polygon points="0 0, 10 3.5, 0 7" fill="#64748b" /></marker>
-                        <marker id="arrowhead-active" markerWidth="10" markerHeight="7" refX="9" refY="3.5" orient="auto"><polygon points="0 0, 10 3.5, 0 7" fill="#2563eb" /></marker>
-                    </defs>
-                    {connections.map(conn => {
-                        let start = { x: 0, y: 0 }, end = { x: 0, y: 0 };
-                        if (conn.fromNode && conn.fromPort) { const pos = getAbsolutePortPosition(conn.fromNode, conn.fromPort); if (pos) start = pos; }
-                        if (conn.toNode && conn.toPort) { const pos = getAbsolutePortPosition(conn.toNode, conn.toPort); if (pos) end = pos; }
-                        if (!start.x && !end.x) return null;
-                        
-                        const isActive = activeItem?.id === conn.id;
-                        const midX = (start.x + end.x) / 2;
-                        const midY = (start.y + end.y) / 2;
-                        // Orthogonal midpoint approximation for label placement
-                        const labelX = midX; 
-                        const labelY = start.y; // Place on horizontal segment if possible, or simple mid
+      <div className="flex-1 flex flex-col overflow-hidden relative">
+         <div className="flex-1 flex overflow-hidden">
+             {/* Sidebar - Equipment Palette */}
+             {showSidebar && (
+                 <div className="w-56 bg-white border-r border-slate-200 overflow-y-auto p-4 flex flex-col space-y-6 shadow-inner z-10 shrink-0">
+                     <div>
+                        <h3 className="text-xs font-bold text-slate-400 uppercase tracking-wider mb-3">Unit Operations</h3>
+                        <div className="grid grid-cols-2 gap-2">
+                            {Object.entries(EQUIPMENT_CONFIGS).filter(([k]) => k !== 'Feed' && k !== 'Product').map(([key, config]) => (
+                                <div 
+                                    key={key}
+                                    draggable
+                                    onDragEnd={(e) => {
+                                        const rect = canvasRef.current?.getBoundingClientRect();
+                                        if(rect) addNode(key as NodeType, e.clientX - rect.left - NODE_WIDTH/2, e.clientY - rect.top - NODE_HEIGHT/2);
+                                    }}
+                                    className={`flex flex-col items-center justify-center p-3 rounded-lg border border-slate-100 hover:border-orange-300 hover:bg-orange-50 cursor-grab active:cursor-grabbing transition-all ${config.color.split(' ')[0]}`}
+                                >
+                                    <config.icon className={`w-6 h-6 mb-2 ${config.color.split(' ').pop()}`} />
+                                    <span className="text-[10px] font-medium text-slate-700 text-center leading-tight">{config.label}</span>
+                                </div>
+                            ))}
+                        </div>
+                     </div>
+                     
+                     <div className="mt-auto">
+                        <div className="p-3 bg-blue-50 rounded-lg border border-blue-100 text-xs text-blue-800">
+                            <p className="font-bold mb-1 flex items-center"><Info className="w-3 h-3 mr-1"/> Tip:</p>
+                            Drag nodes to canvas. Click & drag between ports to connect. Right-click to edit/delete.
+                        </div>
+                     </div>
+                 </div>
+             )}
 
-                        return (
-                            <g 
-                                key={conn.id} 
-                                onDoubleClick={(e) => {
-                                    e.preventDefault();
-                                    e.stopPropagation();
-                                    handleOpenEditModal({ id: conn.id, type: 'connection', data: conn });
-                                }}
-                                onContextMenu={(e) => handleContextMenu(e, 'connection', conn.id)}
-                                className="pointer-events-auto cursor-pointer group"
-                            >
-                                <path d={getPath(start.x, start.y, end.x, end.y)} stroke="transparent" strokeWidth="20" fill="none" />
-                                <path d={getPath(start.x, start.y, end.x, end.y)} stroke={isActive ? "#2563eb" : "#64748b"} strokeWidth={isActive ? "3" : "2"} fill="none" markerEnd={isActive ? "url(#arrowhead-active)" : "url(#arrowhead)"} className="transition-all group-hover:stroke-slate-600" />
-                                
-                                {/* Label Tag */}
-                                <foreignObject x={labelX - 40} y={labelY - 12} width="80" height="24" style={{ overflow: 'visible' }}>
-                                    <div 
-                                        onClick={(e) => {e.stopPropagation(); handleOpenEditModal({ id: conn.id, type: 'connection', data: conn });}}
-                                        className={`flex items-center justify-center px-2 py-0.5 rounded-full text-[10px] font-bold border shadow-sm transition-all whitespace-nowrap cursor-pointer hover:scale-110 ${isActive ? 'bg-blue-600 text-white border-blue-700' : 'bg-white text-slate-600 border-slate-200 hover:border-slate-400'}`}
-                                    >
-                                        {conn.label || 'Stream'}
-                                    </div>
-                                </foreignObject>
-                            </g>
-                        );
-                    })}
+             {/* Canvas Area */}
+             <div 
+                ref={canvasRef}
+                className="flex-1 relative bg-[radial-gradient(#e2e8f0_1px,transparent_1px)] [background-size:20px_20px] overflow-hidden cursor-crosshair"
+                onMouseMove={handleMouseMove}
+                onMouseUp={(e) => handleMouseUp(e, 'canvas')}
+                onMouseDown={(e) => handleMouseDown(e, 'canvas')}
+             >
+                {/* SVG Layer for Connections */}
+                <svg className="absolute inset-0 w-full h-full pointer-events-none">
+                    {connections.map(renderConnection)}
+                    {drawingLine && (
+                        <line 
+                            x1={drawingLine.startX} y1={drawingLine.startY} 
+                            x2={drawingLine.currX} y2={drawingLine.currY} 
+                            stroke="#64748b" strokeWidth="2" strokeDasharray="5,5" 
+                        />
+                    )}
                 </svg>
 
-                {/* Layer 2: Nodes */}
-                {nodes.map((node) => {
-                    const config = EQUIPMENT_CONFIGS[node.type as keyof typeof EQUIPMENT_CONFIGS];
-                    if (!config) return null;
-                    const isActive = activeItem?.id === node.id;
+                {/* Nodes Layer */}
+                {nodes.map(node => {
+                    const config = EQUIPMENT_CONFIGS[node.type];
                     const isCompact = node.type === 'Feed' || node.type === 'Product';
                     const width = isCompact ? COMPACT_NODE_WIDTH : NODE_WIDTH;
                     const height = isCompact ? COMPACT_NODE_HEIGHT : NODE_HEIGHT;
                     
-                    if (isCompact) {
-                        return (
-                             <div 
-                                key={node.id}
-                                onMouseDown={(e) => onNodeMouseDown(e, node.id)}
-                                onDoubleClick={(e) => {
-                                    e.preventDefault();
-                                    e.stopPropagation();
-                                    handleOpenEditModal({ id: node.id, type: 'node', data: node });
-                                }}
-                                onContextMenu={(e) => handleContextMenu(e, 'node', node.id)}
-                                style={{ left: node.x, top: node.y, width: width, height: height, position: 'absolute' }}
-                                className="group z-10 cursor-pointer" 
-                             >
-                                <div className={`w-full h-full rounded-full border bg-slate-400 opacity-0 group-hover:opacity-100 group-hover:bg-white group-hover:border-slate-400 transition-all duration-200 ${isActive ? 'opacity-100 bg-blue-100 border-blue-500 ring-2 ring-blue-200' : ''}`} />
-                                <div className="absolute inset-0 flex items-center justify-center">
-                                     {config.inputs.map(port => (
-                                        <div key={port.id} className="absolute w-full h-full" onMouseDown={(e) => onPortMouseDown(e, node.id, port.id)} onMouseUp={(e) => onPortMouseUp(e, node.id, port.id)} />
-                                     ))}
-                                     {config.outputs.map(port => (
-                                        <div key={port.id} className="absolute w-full h-full" onMouseDown={(e) => onPortMouseDown(e, node.id, port.id)} onMouseUp={(e) => onPortMouseUp(e, node.id, port.id)} />
-                                     ))}
-                                </div>
-                             </div>
-                        );
-                    }
-
                     return (
                         <div 
-                            key={node.id} 
-                            onMouseDown={(e) => onNodeMouseDown(e, node.id)} 
-                            onDoubleClick={(e) => {
-                                e.preventDefault();
-                                e.stopPropagation();
-                                handleOpenEditModal({ id: node.id, type: 'node', data: node });
-                            }}
+                            key={node.id}
+                            style={{ left: node.x, top: node.y, width, height }}
+                            className={`absolute group shadow-sm hover:shadow-md transition-shadow select-none
+                                ${isCompact ? 'rounded-full' : 'rounded-lg'}
+                                ${config.color.split(' ')[0]} border ${config.color.split(' ')[1] || 'border-slate-300'}
+                            `}
+                            onMouseDown={(e) => handleMouseDown(e, 'node', node.id)}
                             onContextMenu={(e) => handleContextMenu(e, 'node', node.id)}
-                            style={{ left: node.x, top: node.y, width: width, height: height, position: 'absolute' }} 
-                            className={`group rounded-lg transition-all flex flex-col cursor-pointer bg-white border-2 shadow-sm hover:shadow-md z-20 ${config.color} ${isActive ? 'ring-2 ring-blue-500 shadow-lg scale-105 z-40' : ''}`}
+                            onDoubleClick={() => openEditModal('node', node.id)}
                         >
-                            <div className={`flex items-center justify-center p-1 w-full h-full pointer-events-none`}>
-                                <config.icon className={`w-5 h-5 mr-1 opacity-75`} />
-                                <span className="text-xs font-bold truncate">{node.label}</span>
-                            </div>
-                            <div className="absolute inset-0 w-full h-full">
-                                {config.inputs.map((port, idx) => {
-                                    const topPos = ((idx + 1) * (100 / (config.inputs.length + 1))) + '%';
-                                    return <div key={port.id} className="absolute w-8 h-8 flex items-center justify-center cursor-crosshair z-[100]" style={{ top: topPos, left: '-16px', transform: 'translateY(-50%)' }} onMouseDown={(e) => onPortMouseDown(e, node.id, port.id)} onMouseUp={(e) => onPortMouseUp(e, node.id, port.id)}><div className="w-3 h-3 rounded-full border border-slate-600 bg-green-400 pointer-events-none"></div></div>;
-                                })}
-                                {config.outputs.map((port, idx) => {
-                                     const topPos = ((idx + 1) * (100 / (config.outputs.length + 1))) + '%';
-                                    return <div key={port.id} className="absolute w-8 h-8 flex items-center justify-center cursor-crosshair z-[100]" style={{ top: topPos, right: '-16px', transform: 'translateY(-50%)' }} onMouseDown={(e) => onPortMouseDown(e, node.id, port.id)} onMouseUp={(e) => onPortMouseUp(e, node.id, port.id)}><div className="w-3 h-3 rounded-full border border-slate-600 bg-red-400 pointer-events-none"></div></div>;
-                                })}
-                            </div>
+                             {!isCompact && (
+                                 <div className="absolute inset-0 flex flex-col items-center justify-center pointer-events-none">
+                                     <config.icon className={`w-6 h-6 mb-1 ${config.color.split(' ').pop()}`} />
+                                     <span className="text-xs font-bold text-slate-700 px-1 truncate max-w-full">{node.label}</span>
+                                 </div>
+                             )}
+                             {isCompact && (
+                                 <div className="w-full h-full flex items-center justify-center">
+                                     <div className={`w-2 h-2 rounded-full ${node.type === 'Feed' ? 'bg-green-500' : 'bg-red-500'}`} />
+                                     {/* Label floating above */}
+                                     <div className="absolute -top-6 left-1/2 transform -translate-x-1/2 bg-slate-800 text-white text-[10px] px-2 py-0.5 rounded opacity-0 group-hover:opacity-100 whitespace-nowrap pointer-events-none transition-opacity">
+                                         {node.label}
+                                     </div>
+                                 </div>
+                             )}
+
+                             {/* Ports */}
+                             {config.inputs.map((port, idx) => {
+                                 const total = config.inputs.length;
+                                 const top = isCompact ? '50%' : `${(idx + 1) * (100 / (total + 1))}%`;
+                                 return (
+                                     <div 
+                                        key={port.id}
+                                        style={{ top, left: -6 }}
+                                        className="absolute w-3 h-3 bg-white border-2 border-slate-400 rounded-full hover:border-orange-500 cursor-pointer z-20"
+                                        title={port.label || 'Input'}
+                                        onMouseDown={(e) => handleMouseDown(e, 'port', node.id, port.id)}
+                                        onMouseUp={(e) => handleMouseUp(e, 'port', node.id, port.id)}
+                                     />
+                                 );
+                             })}
+                             {config.outputs.map((port, idx) => {
+                                 const total = config.outputs.length;
+                                 const top = isCompact ? '50%' : `${(idx + 1) * (100 / (total + 1))}%`;
+                                 return (
+                                     <div 
+                                        key={port.id}
+                                        style={{ top, right: -6 }}
+                                        className="absolute w-3 h-3 bg-white border-2 border-slate-400 rounded-full hover:border-orange-500 cursor-pointer z-20"
+                                        title={port.label || 'Output'}
+                                        onMouseDown={(e) => handleMouseDown(e, 'port', node.id, port.id)}
+                                        onMouseUp={(e) => handleMouseUp(e, 'port', node.id, port.id)}
+                                     />
+                                 );
+                             })}
                         </div>
                     );
                 })}
-                <svg className="absolute inset-0 w-full h-full pointer-events-none z-50 overflow-visible">
-                     {drawingLine && (
-                         <path d={getPath(drawingLine.startX, drawingLine.startY, drawingLine.currX, drawingLine.currY)} stroke="#3b82f6" strokeWidth="3" strokeDasharray="5,5" fill="none" markerEnd="url(#arrowhead-active)" />
+
+             </div>
+         </div>
+         
+         {/* Logger Console Panel (Collapsible) */}
+         <div className={`border-t border-slate-800 bg-slate-900 transition-all duration-300 flex flex-col ${isLogOpen ? 'h-48' : 'h-8'}`}>
+             <div className="flex items-center justify-between px-3 h-8 bg-slate-800 text-slate-300 border-b border-slate-700 select-none cursor-pointer" onClick={() => setIsLogOpen(!isLogOpen)}>
+                 <div className="flex items-center space-x-2">
+                     <Terminal className="w-3.5 h-3.5" />
+                     <span className="text-xs font-bold uppercase tracking-wider">Console & Logs</span>
+                 </div>
+                 <div className="flex items-center space-x-2">
+                    <button 
+                        onClick={(e) => { e.stopPropagation(); setLogs([]); }}
+                        className="p-1 hover:text-white hover:bg-slate-700 rounded"
+                        title="Clear logs"
+                    >
+                        <Eraser className="w-3.5 h-3.5" />
+                    </button>
+                    {isLogOpen ? <ChevronDown className="w-3.5 h-3.5" /> : <ChevronUp className="w-3.5 h-3.5" />}
+                 </div>
+             </div>
+             {isLogOpen && (
+                 <div className="flex-1 overflow-y-auto p-2 font-mono text-xs space-y-1">
+                     {logs.length === 0 && (
+                         <div className="text-slate-600 italic px-2">Nenhum log registrado. Execute ações no fluxograma.</div>
                      )}
-                </svg>
-            </div>
-        </div>
-        
-        {/* Context Menu */}
-        {contextMenu && (
-            <div 
-                className="fixed bg-white rounded-lg shadow-xl border border-slate-200 py-1 z-[100] min-w-[160px] animate-in fade-in zoom-in-95 duration-100"
-                style={{ left: contextMenu.x, top: contextMenu.y }}
-            >
-                <div className="px-4 py-2 text-xs font-bold text-slate-400 uppercase tracking-wider">Opções</div>
-                <button 
-                    onClick={() => handleOpenEditModal({ id: contextMenu.id, type: contextMenu.type })}
-                    className="w-full px-4 py-2 text-left text-sm text-slate-700 hover:bg-slate-50 hover:text-blue-600 flex items-center transition-colors"
-                >
-                    <Edit className="w-4 h-4 mr-2" /> Editar
-                </button>
-                <div className="h-px bg-slate-100 my-1"></div>
-                <button 
-                    onClick={() => handleDeleteItem(contextMenu.id, contextMenu.type)}
-                    className="w-full px-4 py-2 text-left text-sm text-red-600 hover:bg-red-50 flex items-center transition-colors"
-                >
-                    <Trash2 className="w-4 h-4 mr-2" /> Deletar
-                </button>
-            </div>
-        )}
+                     {logs.map((log) => (
+                         <div key={log.id} className="flex items-start hover:bg-slate-800/50 rounded px-2 py-0.5 transition-colors">
+                             <span className="text-slate-500 mr-3 min-w-[60px]">{log.timestamp}</span>
+                             <span className="mr-2 mt-0.5">
+                                 {log.type === 'error' && <XCircle className="w-3 h-3 text-red-500" />}
+                                 {log.type === 'warning' && <AlertTriangle className="w-3 h-3 text-yellow-500" />}
+                                 {log.type === 'success' && <CheckCircle className="w-3 h-3 text-green-500" />}
+                                 {log.type === 'info' && <Info className="w-3 h-3 text-blue-400" />}
+                             </span>
+                             <span className={`
+                                 ${log.type === 'error' ? 'text-red-400' : ''}
+                                 ${log.type === 'warning' ? 'text-yellow-400' : ''}
+                                 ${log.type === 'success' ? 'text-green-400' : ''}
+                                 ${log.type === 'info' ? 'text-slate-300' : ''}
+                             `}>
+                                 {log.message}
+                             </span>
+                         </div>
+                     ))}
+                     <div ref={logEndRef} />
+                 </div>
+             )}
+         </div>
       </div>
 
-      {/* Mineral Database Modal */}
-      {showMineralModal && (
-         <div className="fixed inset-0 z-[60] flex items-center justify-center bg-black/60 backdrop-blur-sm">
-            <div className="bg-white rounded-xl shadow-2xl w-full max-w-5xl mx-4 flex flex-col h-[85vh] animate-in zoom-in-95 duration-200">
-                <div className="p-6 border-b border-slate-100 flex items-center justify-between shrink-0 bg-slate-50 rounded-t-xl">
-                    <div className="flex items-center">
-                        <div className="p-2 bg-purple-100 rounded-lg mr-4"><Database className="w-6 h-6 text-purple-600" /></div>
-                        <div>
-                            <h2 className="text-xl font-bold text-slate-900">Base de Minerais</h2>
-                            <p className="text-sm text-slate-500 flex items-center mt-1">
-                                <span className="flex items-center text-xs bg-slate-200 px-2 py-0.5 rounded text-slate-600 mr-2">
-                                    <ExternalLink className="w-3 h-3 mr-1" /> webmineral.com/data
-                                </span>
-                                Selecione os minerais que farão parte da simulação.
-                            </p>
-                        </div>
-                    </div>
-                    <button onClick={() => setShowMineralModal(false)} className="hover:bg-slate-200 p-2 rounded-lg transition-colors"><X className="w-6 h-6 text-slate-400" /></button>
-                </div>
-                
-                {mineralViewMode === 'list' ? (
-                    <>
-                        <div className="p-4 border-b border-slate-100 flex gap-4 bg-white">
-                             <div className="relative flex-1">
-                                <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-slate-400 w-4 h-4" />
-                                <input 
-                                    type="text" 
-                                    placeholder="Buscar por nome, fórmula ou classe..." 
-                                    value={mineralSearch}
-                                    onChange={(e) => setMineralSearch(e.target.value)}
-                                    className="w-full pl-10 pr-4 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-purple-500 outline-none"
-                                />
-                             </div>
-                             <button onClick={handleCreateMineral} className="px-4 py-2 bg-purple-600 text-white font-medium rounded-lg hover:bg-purple-700 flex items-center transition-colors shadow-sm">
-                                <Plus className="w-4 h-4 mr-2" /> Novo Mineral
-                             </button>
-                        </div>
-
-                        <div className="flex-1 overflow-auto bg-slate-50">
-                            <table className="w-full text-left border-collapse">
-                                <thead className="bg-slate-100 text-slate-600 sticky top-0 shadow-sm z-10">
-                                    <tr>
-                                        <th className="px-6 py-3 text-xs font-bold uppercase tracking-wider text-center w-12">Select</th>
-                                        <th className="px-6 py-3 text-xs font-bold uppercase tracking-wider">Mineral</th>
-                                        <th className="px-6 py-3 text-xs font-bold uppercase tracking-wider">Fórmula</th>
-                                        <th className="px-6 py-3 text-xs font-bold uppercase tracking-wider">SG (g/cm³)</th>
-                                        <th className="px-6 py-3 text-xs font-bold uppercase tracking-wider">WI (kWh/t)</th>
-                                        <th className="px-6 py-3 text-xs font-bold uppercase tracking-wider">Classe</th>
-                                        <th className="px-6 py-3 text-xs font-bold uppercase tracking-wider">Composição</th>
-                                        <th className="px-6 py-3 text-xs font-bold uppercase tracking-wider text-right">Ações</th>
-                                    </tr>
-                                </thead>
-                                <tbody className="divide-y divide-slate-200 bg-white">
-                                    {filteredMinerals.map(min => (
-                                        <tr key={min.id} className="hover:bg-purple-50 transition-colors group">
-                                            <td className="px-6 py-3 text-center">
-                                                <button 
-                                                    onClick={() => handleToggleSelection(min.id)}
-                                                    className={`p-1 rounded transition-colors ${min.selected ? 'text-purple-600 hover:text-purple-800' : 'text-slate-300 hover:text-slate-500'}`}
-                                                >
-                                                    {min.selected ? <CheckSquare className="w-5 h-5" /> : <Square className="w-5 h-5" />}
-                                                </button>
-                                            </td>
-                                            <td className="px-6 py-3 font-medium text-slate-900">{min.name}</td>
-                                            <td className="px-6 py-3 font-mono text-slate-600 bg-slate-50/50">{min.formula}</td>
-                                            <td className="px-6 py-3 text-slate-600">{min.density}</td>
-                                            <td className="px-6 py-3 text-slate-600">{min.workIndex}</td>
-                                            <td className="px-6 py-3 text-slate-600"><span className="inline-flex px-2 py-0.5 rounded-full text-xs font-medium bg-slate-100 text-slate-600">{min.class}</span></td>
-                                            <td className="px-6 py-3 text-xs text-slate-500 max-w-xs truncate" title={min.elementalComposition}>{min.elementalComposition}</td>
-                                            <td className="px-6 py-3 text-right">
-                                                <div className="flex justify-end space-x-2 opacity-0 group-hover:opacity-100 transition-opacity">
-                                                    <button onClick={() => handleEditMineral(min)} className="p-1 text-blue-600 hover:bg-blue-50 rounded"><Edit className="w-4 h-4" /></button>
-                                                    <button onClick={() => handleDeleteMineral(min.id)} className="p-1 text-red-600 hover:bg-red-50 rounded"><Trash2 className="w-4 h-4" /></button>
-                                                </div>
-                                            </td>
-                                        </tr>
-                                    ))}
-                                </tbody>
-                            </table>
-                        </div>
-                    </>
-                ) : (
-                    <div className="flex-1 overflow-y-auto p-8 bg-slate-50 flex justify-center">
-                        <div className="max-w-2xl w-full bg-white p-8 rounded-xl shadow-sm border border-slate-200 h-fit">
-                            <div className="flex items-center mb-6 border-b border-slate-100 pb-4">
-                                <button onClick={() => setMineralViewMode('list')} className="mr-4 text-slate-400 hover:text-slate-600"><ArrowLeft className="w-6 h-6" /></button>
-                                <h3 className="text-xl font-bold text-slate-800">{currentMineral.id?.startsWith('custom') ? 'Criar Novo Mineral' : 'Editar Mineral'}</h3>
-                            </div>
-                            
-                            <div className="grid grid-cols-2 gap-6 space-y-2">
-                                <div className="col-span-2">
-                                    <label className="block text-sm font-medium text-slate-700 mb-1">Nome do Mineral</label>
-                                    <input type="text" value={currentMineral.name || ''} onChange={(e) => setCurrentMineral(p => ({...p, name: e.target.value}))} className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-purple-500 outline-none" placeholder="Ex: Calcopirita" />
-                                </div>
-                                
-                                <div>
-                                    <label className="block text-sm font-medium text-slate-700 mb-1">Fórmula Química</label>
-                                    <div className="relative">
-                                        <FlaskConical className="absolute left-3 top-1/2 transform -translate-y-1/2 text-slate-400 w-4 h-4" />
-                                        <input type="text" value={currentMineral.formula || ''} onChange={(e) => setCurrentMineral(p => ({...p, formula: e.target.value}))} className="w-full pl-10 px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-purple-500 outline-none font-mono" placeholder="Ex: CuFeS2" />
-                                    </div>
-                                </div>
-                                
-                                <div>
-                                    <label className="block text-sm font-medium text-slate-700 mb-1">Classe Mineral</label>
-                                    <input type="text" value={currentMineral.class || ''} onChange={(e) => setCurrentMineral(p => ({...p, class: e.target.value}))} className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-purple-500 outline-none" placeholder="Ex: Sulfide" />
-                                </div>
-
-                                <div>
-                                    <label className="block text-sm font-medium text-slate-700 mb-1">Densidade (SG)</label>
-                                    <div className="relative">
-                                        <Scale className="absolute left-3 top-1/2 transform -translate-y-1/2 text-slate-400 w-4 h-4" />
-                                        <input type="number" step="0.01" value={currentMineral.density || 0} onChange={(e) => setCurrentMineral(p => ({...p, density: parseFloat(e.target.value)}))} className="w-full pl-10 px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-purple-500 outline-none" />
-                                    </div>
-                                </div>
-
-                                <div>
-                                    <label className="block text-sm font-medium text-slate-700 mb-1">Work Index (kWh/t)</label>
-                                    <div className="relative">
-                                        <Hammer className="absolute left-3 top-1/2 transform -translate-y-1/2 text-slate-400 w-4 h-4" />
-                                        <input type="number" step="0.1" value={currentMineral.workIndex || 0} onChange={(e) => setCurrentMineral(p => ({...p, workIndex: parseFloat(e.target.value)}))} className="w-full pl-10 px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-purple-500 outline-none" />
-                                    </div>
-                                </div>
-
-                                <div className="col-span-2">
-                                    <label className="block text-sm font-medium text-slate-700 mb-1">Composição Elementar</label>
-                                    <div className="relative">
-                                        <Atom className="absolute left-3 top-3 text-slate-400 w-4 h-4" />
-                                        <textarea 
-                                            value={currentMineral.elementalComposition || ''} 
-                                            onChange={(e) => setCurrentMineral(p => ({...p, elementalComposition: e.target.value}))} 
-                                            className="w-full pl-10 px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-purple-500 outline-none font-mono text-sm h-24" 
-                                            placeholder="Ex: Cu: 34.63%, Fe: 30.43%, S: 34.94%"
-                                        />
-                                    </div>
-                                    <p className="text-xs text-slate-500 mt-1">Formato: Elemento: Percentual%, ... (Usado para o balanço de massa)</p>
-                                </div>
-                            </div>
-
-                            <div className="mt-8 flex justify-end space-x-3">
-                                <button onClick={() => setMineralViewMode('list')} className="px-4 py-2 text-slate-600 font-medium hover:bg-slate-100 rounded-lg transition-colors">Cancelar</button>
-                                <button onClick={handleSaveMineral} className="px-6 py-2 bg-purple-600 text-white font-bold rounded-lg hover:bg-purple-700 shadow-md flex items-center transition-colors">
-                                    <Save className="w-4 h-4 mr-2" /> Salvar Mineral
-                                </button>
-                            </div>
-                        </div>
-                    </div>
-                )}
-
-                {mineralViewMode === 'list' && (
-                    <div className="p-4 bg-white border-t border-slate-200 flex justify-between items-center text-sm text-slate-500">
-                        <span>Total de {filteredMinerals.length} minerais cadastrados. <span className="text-purple-600 font-bold ml-1">{minerals.filter(m => m.selected).length} selecionados para o projeto.</span></span>
-                        <button onClick={() => setShowMineralModal(false)} className="px-6 py-2 bg-slate-100 text-slate-700 hover:bg-slate-200 font-medium rounded-lg transition-colors">Fechar</button>
-                    </div>
-                )}
-            </div>
-         </div>
+      {/* Context Menu */}
+      {contextMenu && (
+          <div 
+            style={{ left: contextMenu.x, top: contextMenu.y }} 
+            className="fixed bg-white border border-slate-200 rounded-lg shadow-lg py-1 w-40 z-50 animate-in fade-in zoom-in-95 duration-100"
+          >
+              <button onClick={() => openEditModal(contextMenu.type, contextMenu.id)} className="w-full text-left px-4 py-2 text-sm hover:bg-slate-50 flex items-center">
+                  <Edit className="w-4 h-4 mr-2 text-slate-500" /> Edit
+              </button>
+              <button onClick={deleteItem} className="w-full text-left px-4 py-2 text-sm hover:bg-red-50 text-red-600 flex items-center">
+                  <Trash2 className="w-4 h-4 mr-2" /> Delete
+              </button>
+          </div>
       )}
 
-      {editModalOpen && activeItem && (
-          <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm">
-              <div className="bg-white rounded-xl shadow-2xl w-full max-w-2xl mx-4 overflow-hidden flex flex-col max-h-[90vh]">
-                  <div className="flex items-center justify-between p-4 border-b border-slate-200 bg-slate-50 shrink-0">
-                      <h3 className="font-bold text-lg text-slate-900 flex items-center">
-                        {activeItem.type === 'node' ? (
-                            activeItem.data.type === 'Feed' ? <Waves className="w-5 h-5 mr-2 text-blue-600" /> : <Settings2 className="w-5 h-5 mr-2 text-slate-500" />
-                        ) : <ArrowRight className="w-5 h-5 mr-2 text-slate-500" />}
-                        {activeItem.type === 'node' ? `Editar ${activeItem.data.label}` : 'Editar Corrente (Stream)'}
-                      </h3>
-                      <button onClick={() => setEditModalOpen(false)}><X className="w-6 h-6 text-slate-400" /></button>
+      {/* Clear Flowsheet Confirmation Modal (Custom) */}
+      {showClearConfirm && (
+          <div className="fixed inset-0 z-[60] flex items-center justify-center bg-black/40 backdrop-blur-sm">
+               <div className="bg-white p-6 rounded-xl shadow-2xl border border-slate-200 w-96 animate-in zoom-in-95 duration-200">
+                    <div className="flex items-center justify-center w-12 h-12 bg-red-100 rounded-full mb-4 mx-auto">
+                        <Trash2 className="w-6 h-6 text-red-600" />
+                    </div>
+                    <h3 className="text-lg font-bold text-slate-900 text-center mb-2">Limpar Fluxograma?</h3>
+                    <p className="text-slate-500 text-center text-sm mb-6">
+                        Esta ação removerá todos os equipamentos e conexões atuais. Esta operação é irreversível.
+                    </p>
+                    <div className="flex justify-center space-x-3">
+                        <button 
+                            onClick={() => setShowClearConfirm(false)} 
+                            className="px-4 py-2 text-slate-700 font-medium hover:bg-slate-100 rounded-lg transition-colors"
+                        >
+                            Cancelar
+                        </button>
+                        <button 
+                            onClick={handleConfirmClear} 
+                            className="px-4 py-2 bg-red-600 text-white font-bold rounded-lg hover:bg-red-700 shadow-md transition-colors"
+                        >
+                            Confirmar Limpeza
+                        </button>
+                    </div>
+               </div>
+          </div>
+      )}
+
+      {/* Edit Modal (Generic) */}
+      {editModalOpen && (
+          <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
+              <div className="bg-white rounded-xl shadow-xl w-full max-w-md max-h-[90vh] flex flex-col">
+                  <div className="p-4 border-b border-slate-200 flex justify-between items-center">
+                      <h3 className="font-bold text-lg">Edit {editType === 'node' ? 'Component' : 'Stream'}</h3>
+                      <button onClick={() => setEditModalOpen(false)}><X className="w-5 h-5 text-slate-400" /></button>
                   </div>
                   
-                  <div className="p-6 overflow-y-auto flex-1">
-                       {/* COMMON: LABEL INPUT */}
-                       <div className="mb-6">
-                            <label className="block text-sm font-medium text-slate-700 mb-1">Nome / Identificação</label>
-                            <div className="relative">
-                                <Tag className="absolute left-3 top-1/2 transform -translate-y-1/2 text-slate-400 w-4 h-4" />
+                  <div className="p-6 overflow-y-auto flex-1 space-y-4">
+                      {/* Common: Label */}
+                      <div>
+                          <label className="block text-xs font-bold text-slate-500 uppercase mb-1">Name / Tag</label>
+                          <input 
+                            type="text" 
+                            value={editLabel}
+                            onChange={(e) => setEditLabel(e.target.value)}
+                            className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none"
+                          />
+                      </div>
+
+                      {/* Display Simulation Results if available (Read-Only) */}
+                      {editFormData._calculated && (
+                          <div className="bg-slate-50 p-4 rounded-lg border border-slate-200 mb-4">
+                              <h4 className="text-xs font-bold text-blue-600 uppercase mb-2 flex items-center"><Activity className="w-3 h-3 mr-1"/> Calculated State</h4>
+                              <div className="grid grid-cols-2 gap-y-1 text-sm">
+                                  <span className="text-slate-500">Total Mass:</span>
+                                  <span className="font-mono text-slate-800">{editFormData._calculated.totalTph.toFixed(1)} t/h</span>
+                                  <span className="text-slate-500">Solids:</span>
+                                  <span className="font-mono text-slate-800">{editFormData._calculated.solidsTph.toFixed(1)} t/h</span>
+                                  <span className="text-slate-500">Water:</span>
+                                  <span className="font-mono text-slate-800">{editFormData._calculated.waterTph.toFixed(1)} m³/h</span>
+                                  <span className="text-slate-500">% Solids:</span>
+                                  <span className="font-mono text-slate-800">{editFormData._calculated.percentSolids.toFixed(1)} %</span>
+                              </div>
+                          </div>
+                      )}
+
+                      {/* Parameters Form */}
+                      {Object.entries(editFormData).filter(([k]) => !k.startsWith('_')).map(([key, value]) => {
+                          if (key.startsWith('mineral_')) return null; // Handle minerals separately
+                          return (
+                            <div key={key}>
+                                <label className="block text-xs font-bold text-slate-500 uppercase mb-1">{key.replace(/([A-Z])/g, ' $1').trim()}</label>
                                 <input 
-                                    type="text" 
-                                    value={editLabel}
-                                    onChange={(e) => setEditLabel(e.target.value)}
-                                    className="w-full pl-10 pr-4 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none transition-all"
-                                    placeholder="Ex: Alimentação Moinho"
+                                    type={typeof value === 'number' ? 'number' : 'text'}
+                                    value={value}
+                                    onChange={(e) => handleFormChange(key, e.target.type === 'number' ? parseFloat(e.target.value) : e.target.value)}
+                                    className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none"
                                 />
                             </div>
-                       </div>
+                          );
+                      })}
 
-                       {activeItem.type === 'connection' ? (
-                           <div className="space-y-6">
-                               <div className="p-4 bg-blue-50 rounded-lg border border-blue-100 text-sm text-blue-800 flex items-start">
-                                   <Info className="w-4 h-4 mr-2 mt-0.5 flex-shrink-0" />
-                                   <span>
-                                      Defina as propriedades iniciais da corrente. 
-                                      <br/><span className="text-xs text-slate-500 mt-1 block opacity-80">Nota: Se esta corrente for uma alimentação (Feed), estes valores serão usados como input para a simulação. Caso contrário, eles poderão ser sobrescritos pelo balanço de massa.</span>
-                                   </span>
-                               </div>
-
-                               {/* Stream Properties Form */}
-                               <div>
-                                   <h4 className="text-sm font-bold text-slate-500 uppercase tracking-wider mb-4 flex items-center border-b border-slate-100 pb-2">
-                                       <Waves className="w-4 h-4 mr-2" /> 
-                                       Propriedades Físicas
-                                   </h4>
-                                   <div className="grid grid-cols-2 gap-6">
-                                        <div>
-                                            <label className="block text-sm font-medium text-slate-700 mb-1">Vazão Volumétrica (m³/h)</label>
-                                            <input 
-                                                type="number" 
-                                                placeholder="0.0"
-                                                value={editFormData.volumetricFlow || ''} 
-                                                onChange={(e) => setEditFormData(p=>({...p, volumetricFlow: e.target.value}))} 
-                                                className="w-full border border-slate-300 rounded-lg px-3 py-2 focus:ring-2 focus:ring-blue-500 outline-none transition-all font-mono text-slate-800" 
-                                            />
-                                        </div>
-                                        <div>
-                                            <label className="block text-sm font-medium text-slate-700 mb-1">Tonalgem Sólida (t/h)</label>
-                                            <input 
-                                                type="number" 
-                                                placeholder="0.0"
-                                                value={editFormData.solidsTph || ''} 
-                                                onChange={(e) => setEditFormData(p=>({...p, solidsTph: e.target.value}))} 
-                                                className="w-full border border-slate-300 rounded-lg px-3 py-2 focus:ring-2 focus:ring-blue-500 outline-none transition-all font-mono text-slate-800" 
-                                            />
-                                        </div>
-                                        <div>
-                                            <label className="block text-sm font-medium text-slate-700 mb-1">% Sólidos (Cw)</label>
-                                            <input 
-                                                type="number" 
-                                                placeholder="0.0"
-                                                value={editFormData.percentSolids || ''} 
-                                                onChange={(e) => setEditFormData(p=>({...p, percentSolids: e.target.value}))} 
-                                                className="w-full border border-slate-300 rounded-lg px-3 py-2 focus:ring-2 focus:ring-blue-500 outline-none transition-all font-mono text-slate-800" 
-                                            />
-                                        </div>
-                                   </div>
-                               </div>
-
-                               {/* Composition Form (Dynamic) */}
-                               <div>
-                                   <h4 className="text-sm font-bold text-slate-500 uppercase tracking-wider mb-4 flex items-center border-b border-slate-100 pb-2">
-                                       <Beaker className="w-4 h-4 mr-2" /> 
-                                       Composição Mineralógica (%)
-                                   </h4>
-                                   
-                                   {minerals.some(m => m.selected) ? (
-                                        <div className="bg-slate-50 rounded-lg border border-slate-200 p-4">
-                                            <div className="grid grid-cols-2 gap-4">
-                                                {minerals.filter(m => m.selected).map(min => (
-                                                    <div key={min.id}>
-                                                        <label className="block text-xs font-bold text-slate-500 uppercase mb-1">{min.name} (%)</label>
-                                                        <input 
-                                                            type="number" 
-                                                            placeholder="0.00"
-                                                            value={editFormData[`mineral_${min.id}`] || ''} 
-                                                            onChange={(e) => setEditFormData(p => ({...p, [`mineral_${min.id}`]: e.target.value}))} 
-                                                            className="w-full border border-slate-300 rounded-md px-2 py-1.5 focus:ring-2 focus:ring-purple-500 outline-none font-mono text-sm" 
-                                                        />
-                                                    </div>
-                                                ))}
-                                            </div>
-                                            <p className="text-xs text-slate-400 mt-3 flex items-center">
-                                                <Info className="w-3 h-3 mr-1" />
-                                                Insira a porcentagem em massa de cada mineral. O simulador calculará os teores elementares (Cu, Fe, S, etc.) automaticamente.
-                                            </p>
-                                        </div>
-                                   ) : (
-                                       <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-4 text-center">
-                                           <AlertTriangle className="w-6 h-6 text-yellow-500 mx-auto mb-2" />
-                                           <p className="text-sm text-yellow-800 font-medium">Nenhum mineral selecionado.</p>
-                                           <p className="text-xs text-yellow-700 mt-1">Vá em "Components" e selecione os minerais do seu projeto para definir a composição.</p>
-                                       </div>
-                                   )}
-                               </div>
-                           </div>
-                       ) : (
-                           // Equipamentos (Nodes)
-                           <div className="space-y-4">
-                                <div className="grid grid-cols-1 gap-4">
-                                    {Object.entries(editFormData).map(([key, value]) => {
-                                        // Filter out internal keys or complex objects if needed
-                                        if (typeof value === 'object') return null;
-                                        
-                                        return (
-                                            <div key={key}>
-                                                <label className="block text-sm font-medium text-slate-700 capitalize mb-1">{key.replace(/([A-Z])/g, ' $1').trim()}</label>
-                                                <input 
-                                                    type="text" 
-                                                    value={value as any} 
-                                                    onChange={(e) => setEditFormData(p=>({...p, [key]: e.target.value}))} 
-                                                    className="w-full border border-slate-300 rounded-lg p-2 focus:ring-2 focus:ring-blue-500 outline-none transition-all" 
-                                                />
-                                            </div>
-                                        );
-                                    })}
-                                </div>
-                           </div>
-                       )}
+                      {/* Connection Specific: Mineral Grade Input (Only for streams connected to Feed nodes essentially, but allowed everywhere for overrides) */}
+                      {editType === 'connection' && (
+                          <div className="border-t border-slate-200 pt-4">
+                              <h4 className="text-sm font-bold text-slate-800 mb-3 flex items-center">
+                                  <Database className="w-4 h-4 mr-2 text-purple-600" />
+                                  Composition (%)
+                              </h4>
+                              <div className="space-y-2 max-h-40 overflow-y-auto pr-2">
+                                  {minerals.filter(m => m.selected).map(mineral => (
+                                      <div key={mineral.id} className="flex items-center justify-between">
+                                          <span className="text-sm text-slate-600 truncate flex-1">{mineral.name}</span>
+                                          <input 
+                                            type="number"
+                                            placeholder="0.0"
+                                            value={editFormData[`mineral_${mineral.id}`] || ''}
+                                            onChange={(e) => handleFormChange(`mineral_${mineral.id}`, parseFloat(e.target.value))}
+                                            className="w-24 px-2 py-1 border border-slate-300 rounded text-right text-sm focus:ring-1 focus:ring-purple-500 outline-none"
+                                          />
+                                      </div>
+                                  ))}
+                              </div>
+                              <p className="text-xs text-slate-400 mt-2 text-right">Must sum to 100% (approx)</p>
+                          </div>
+                      )}
                   </div>
-                  <div className="p-4 bg-slate-50 border-t border-slate-200 flex justify-between shrink-0">
-                      <button 
-                        onClick={() => handleDeleteItem(activeItem.id, activeItem.type)}
-                        className="px-4 py-2 text-red-600 font-medium hover:bg-red-50 rounded-lg transition-colors flex items-center"
-                      >
-                        <Trash2 className="w-4 h-4 mr-2" /> Deletar
-                      </button>
-                      <div className="flex space-x-3">
-                          <button onClick={() => setEditModalOpen(false)} className="px-4 py-2 text-slate-600 font-medium hover:bg-slate-100 rounded-lg transition-colors">Cancelar</button>
-                          <button onClick={handleSaveEditModal} className="px-6 py-2 bg-blue-600 text-white rounded-lg font-bold hover:bg-blue-700 shadow-sm transition-colors flex items-center">
-                              <Save className="w-4 h-4 mr-2" /> Salvar
-                          </button>
-                      </div>
+
+                  <div className="p-4 border-t border-slate-200 bg-slate-50 rounded-b-xl flex justify-end space-x-2">
+                      <button onClick={() => setEditModalOpen(false)} className="px-4 py-2 text-slate-600 font-medium hover:bg-slate-200 rounded-lg">Cancel</button>
+                      <button onClick={saveEditForm} className="px-4 py-2 bg-blue-600 text-white font-medium rounded-lg hover:bg-blue-700 shadow-sm">Save Changes</button>
                   </div>
               </div>
           </div>
       )}
-      
-      {showClearModal && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-50 p-4">
-            <div className="bg-white rounded-2xl shadow-xl max-w-md w-full overflow-hidden">
-                <div className="p-6">
-                    <h3 className="text-xl font-bold text-slate-900 mb-2">Limpar Projeto?</h3>
-                    <p className="text-slate-500 text-sm">Isso removerá todos os equipamentos e conexões desenhados.</p>
-                </div>
-                <div className="bg-slate-50 px-6 py-4 flex justify-end space-x-3">
-                    <button onClick={() => setShowClearModal(false)} className="px-4 py-2 border rounded-lg">Cancelar</button>
-                    <button onClick={() => { setNodes([]); setConnections([]); setShowClearModal(false); }} className="px-4 py-2 bg-red-600 text-white rounded-lg">Limpar Tudo</button>
-                </div>
-            </div>
-        </div>
+
+      {/* Minerals Management Modal */}
+      {showMineralModal && (
+          <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
+               <div className="bg-white rounded-xl shadow-xl w-full max-w-4xl max-h-[90vh] flex flex-col">
+                   <div className="p-6 border-b border-slate-200 flex justify-between items-center bg-slate-50 rounded-t-xl">
+                      <div>
+                        <h2 className="text-xl font-bold text-slate-900 flex items-center">
+                            <Database className="w-6 h-6 mr-3 text-purple-600" />
+                            Database de Minerais
+                        </h2>
+                        <p className="text-sm text-slate-500">Gerencie os componentes que serão simulados no balanço.</p>
+                      </div>
+                      <button onClick={() => setShowMineralModal(false)}><X className="w-6 h-6 text-slate-400" /></button>
+                   </div>
+                   
+                   <div className="flex-1 overflow-hidden flex flex-col">
+                       {mineralViewMode === 'list' ? (
+                           <>
+                                <div className="p-4 border-b border-slate-200 flex space-x-4">
+                                    <div className="relative flex-1">
+                                        <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-slate-400 w-5 h-5" />
+                                        <input 
+                                            type="text" 
+                                            placeholder="Buscar mineral (ex: Quartzo, Au...)"
+                                            value={mineralSearch}
+                                            onChange={(e) => setMineralSearch(e.target.value)}
+                                            className="w-full pl-10 pr-4 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-purple-500 outline-none"
+                                        />
+                                    </div>
+                                    <button 
+                                        onClick={handleCreateMineral}
+                                        className="px-4 py-2 bg-purple-600 text-white font-medium rounded-lg hover:bg-purple-700 flex items-center"
+                                    >
+                                        <Plus className="w-4 h-4 mr-2" /> Novo
+                                    </button>
+                                </div>
+                                <div className="flex-1 overflow-y-auto p-4">
+                                    <table className="w-full text-left border-collapse">
+                                        <thead>
+                                            <tr className="text-xs font-bold text-slate-500 uppercase border-b border-slate-200">
+                                                <th className="py-3 pl-2 w-10">Use</th>
+                                                <th className="py-3">Name</th>
+                                                <th className="py-3">Formula</th>
+                                                <th className="py-3">SG</th>
+                                                <th className="py-3">Type</th>
+                                                <th className="py-3 text-right">Actions</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody>
+                                            {filteredMinerals.map(min => (
+                                                <tr key={min.id} className="border-b border-slate-100 hover:bg-slate-50 group">
+                                                    <td className="py-3 pl-2">
+                                                        <input 
+                                                            type="checkbox" 
+                                                            checked={min.selected} 
+                                                            onChange={() => handleToggleSelection(min.id)}
+                                                            className="w-4 h-4 text-purple-600 rounded border-slate-300 focus:ring-purple-500 cursor-pointer"
+                                                        />
+                                                    </td>
+                                                    <td className="py-3 font-medium text-slate-900">{min.name}</td>
+                                                    <td className="py-3 font-mono text-slate-600 text-sm">{min.formula}</td>
+                                                    <td className="py-3 text-slate-600">{min.density}</td>
+                                                    <td className="py-3">
+                                                        <span className="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-slate-100 text-slate-800">
+                                                            {min.class}
+                                                        </span>
+                                                    </td>
+                                                    <td className="py-3 text-right">
+                                                        <div className="flex justify-end space-x-2 opacity-0 group-hover:opacity-100 transition-opacity">
+                                                            <button onClick={() => handleEditMineral(min)} className="p-1 text-blue-600 hover:bg-blue-100 rounded"><Edit className="w-4 h-4" /></button>
+                                                            <button onClick={() => handleDeleteMineral(min.id)} className="p-1 text-red-600 hover:bg-red-100 rounded"><Trash2 className="w-4 h-4" /></button>
+                                                        </div>
+                                                    </td>
+                                                </tr>
+                                            ))}
+                                        </tbody>
+                                    </table>
+                                </div>
+                           </>
+                       ) : (
+                           <div className="p-6 overflow-y-auto">
+                               <button onClick={() => setMineralViewMode('list')} className="mb-6 flex items-center text-sm text-slate-500 hover:text-slate-800">
+                                   <ArrowLeft className="w-4 h-4 mr-1" /> Voltar para lista
+                               </button>
+                               <div className="grid grid-cols-2 gap-6">
+                                   <div>
+                                       <label className="block text-sm font-medium text-slate-700 mb-1">Nome</label>
+                                       <input type="text" value={currentMineral.name || ''} onChange={e => setCurrentMineral(p => ({...p, name: e.target.value}))} className="w-full border p-2 rounded" />
+                                   </div>
+                                   <div>
+                                       <label className="block text-sm font-medium text-slate-700 mb-1">Fórmula Química</label>
+                                       <input type="text" value={currentMineral.formula || ''} onChange={e => setCurrentMineral(p => ({...p, formula: e.target.value}))} className="w-full border p-2 rounded" />
+                                   </div>
+                                   <div>
+                                       <label className="block text-sm font-medium text-slate-700 mb-1">Densidade (SG)</label>
+                                       <input type="number" value={currentMineral.density || ''} onChange={e => setCurrentMineral(p => ({...p, density: parseFloat(e.target.value)}))} className="w-full border p-2 rounded" />
+                                   </div>
+                                   <div>
+                                       <label className="block text-sm font-medium text-slate-700 mb-1">Classificação</label>
+                                       <select value={currentMineral.class || 'Silicate'} onChange={e => setCurrentMineral(p => ({...p, class: e.target.value}))} className="w-full border p-2 rounded">
+                                           <option value="Silicate">Silicato</option>
+                                           <option value="Sulfide">Sulfeto</option>
+                                           <option value="Oxide">Óxido</option>
+                                           <option value="Carbonate">Carbonato</option>
+                                           <option value="Native Element">Nativo</option>
+                                       </select>
+                                   </div>
+                                   <div className="col-span-2">
+                                       <label className="block text-sm font-medium text-slate-700 mb-1">Composição Elementar (Texto)</label>
+                                       <input type="text" placeholder="Ex: Fe: 69.9%, O: 30.1%" value={currentMineral.elementalComposition || ''} onChange={e => setCurrentMineral(p => ({...p, elementalComposition: e.target.value}))} className="w-full border p-2 rounded" />
+                                       <p className="text-xs text-slate-500 mt-1">Usado para cálculo de ensaios químicos (Assays).</p>
+                                   </div>
+                               </div>
+                               <div className="mt-8 flex justify-end">
+                                   <button onClick={handleSaveMineral} className="px-6 py-2 bg-green-600 text-white font-bold rounded-lg hover:bg-green-700 flex items-center">
+                                       <SaveIcon className="w-4 h-4 mr-2" /> Salvar Mineral
+                                   </button>
+                               </div>
+                           </div>
+                       )}
+                   </div>
+               </div>
+          </div>
       )}
+
     </div>
   );
 };

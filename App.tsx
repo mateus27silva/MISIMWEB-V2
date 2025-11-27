@@ -1,8 +1,7 @@
 
-
 import React, { useState } from 'react';
 import { Layout } from './components/Layout';
-import { EquipmentType, NodeData, Connection } from './types';
+import { EquipmentType, NodeData, Connection, Mineral, LogEntry } from './types';
 import { DashboardView } from './views/DashboardView';
 import { AuthView } from './views/AuthView';
 import { AdminView } from './views/AdminView';
@@ -11,6 +10,7 @@ import { ProjectView } from './views/ProjectView';
 import { ResultsView } from './views/ResultsView';
 import { Construction } from 'lucide-react';
 import { SimulationResult } from './services/flowsheetSolver';
+import { WEBMINERAL_DB } from './services/miningMath';
 
 interface User {
   email: string;
@@ -37,8 +37,11 @@ const App: React.FC = () => {
   const [authMode, setAuthMode] = useState<'login' | 'register'>('login');
 
   // --- Persistent State for Project Flowsheet ---
+  // Lifted up so it doesn't reset on navigation
   const [projectNodes, setProjectNodes] = useState<NodeData[]>([]);
   const [projectConnections, setProjectConnections] = useState<Connection[]>([]);
+  const [projectMinerals, setProjectMinerals] = useState<Mineral[]>(WEBMINERAL_DB);
+  const [projectLogs, setProjectLogs] = useState<LogEntry[]>([]);
   
   // --- Simulation Results State ---
   const [simulationResult, setSimulationResult] = useState<SimulationResult | null>(null);
@@ -67,9 +70,7 @@ const App: React.FC = () => {
 
   const handleSimulationComplete = (results: SimulationResult) => {
       setSimulationResult(results);
-      // Optional: Automatically navigate to results?
-      // setCurrentView(EquipmentType.RESULTS); 
-      // For now, we keep the user in Project View but data is ready.
+      // We keep the user in Project View to see visuals, but data is ready for Results View
   };
 
   const renderView = () => {
@@ -81,6 +82,10 @@ const App: React.FC = () => {
             setNodes={setProjectNodes}
             connections={projectConnections}
             setConnections={setProjectConnections}
+            minerals={projectMinerals}
+            setMinerals={setProjectMinerals}
+            logs={projectLogs}
+            setLogs={setProjectLogs}
             onSimulationComplete={handleSimulationComplete}
             onNavigateToResults={() => setCurrentView(EquipmentType.RESULTS)}
           />
