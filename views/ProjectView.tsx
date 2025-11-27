@@ -349,6 +349,12 @@ export const ProjectView: React.FC<ProjectViewProps> = ({
     return newNode;
   };
 
+  // --- Path Helper (Aspen Style Orthogonal) ---
+  const getOrthogonalPath = (start: {x: number, y: number}, end: {x: number, y: number}) => {
+      const midX = (start.x + end.x) / 2;
+      return `M ${start.x} ${start.y} L ${midX} ${start.y} L ${midX} ${end.y} L ${end.x} ${end.y}`;
+  };
+
   // --- Handlers ---
   const handleMouseDown = (e: React.MouseEvent, type: 'node' | 'port' | 'canvas', id?: string, portId?: string) => {
     // Only allow drag/draw on Left Click. Right click (button 2) is for context menu.
@@ -548,11 +554,8 @@ export const ProjectView: React.FC<ProjectViewProps> = ({
       const end = getAbsolutePortPosition(conn.toNode!, conn.toPort!);
       if (!start || !end) return null;
 
-      // Bezier Curve
-      const dist = Math.abs(end.x - start.x);
-      const cp1 = { x: start.x + dist * 0.5, y: start.y };
-      const cp2 = { x: end.x - dist * 0.5, y: end.y };
-      const path = `M ${start.x} ${start.y} C ${cp1.x} ${cp1.y} ${cp2.x} ${cp2.y} ${end.x} ${end.y}`;
+      // Aspen Style Orthogonal Path (H-V-H)
+      const path = getOrthogonalPath(start, end);
 
       const isSelected = activeItem?.id === conn.id;
 
@@ -560,21 +563,32 @@ export const ProjectView: React.FC<ProjectViewProps> = ({
           <g key={conn.id} 
              onContextMenu={(e) => handleContextMenu(e, 'connection', conn.id)}
              onClick={() => openEditModal('connection', conn.id)}
-             className="cursor-pointer group"
+             className="cursor-pointer group pointer-events-auto"
           >
-              <path d={path} stroke="transparent" strokeWidth={15} fill="none" />
+              {/* Invisible wide stroke for easier clicking */}
+              <path d={path} stroke="transparent" strokeWidth={20} fill="none" />
+              
+              {/* Visible Path */}
               <path d={path} 
                     stroke={isSelected ? '#f97316' : '#64748b'} 
                     strokeWidth={isSelected ? 4 : 2} 
                     fill="none" 
                     className="transition-colors duration-200 group-hover:stroke-orange-400"
+                    strokeLinejoin="round"
               />
+              
               {/* Arrow Head */}
-              <circle cx={end.x} cy={end.y} r={4} fill={isSelected ? '#f97316' : '#64748b'} />
+              {/* We need to rotate the arrow based on the final segment direction. 
+                  In this orthogonal logic, the final segment is always horizontal entering the port. 
+              */}
+              <path 
+                  d={`M ${end.x} ${end.y} L ${end.x - 6} ${end.y - 3} L ${end.x - 6} ${end.y + 3} Z`} 
+                  fill={isSelected ? '#f97316' : '#64748b'} 
+              />
               
               {/* Label Badge */}
               <foreignObject x={(start.x + end.x)/2 - 20} y={(start.y + end.y)/2 - 10} width={40} height={20}>
-                  <div className="bg-white border border-slate-200 text-[10px] text-center rounded text-slate-600 shadow-sm leading-tight">
+                  <div className="bg-white border border-slate-200 text-[10px] text-center rounded text-slate-600 shadow-sm leading-tight pointer-events-none">
                       {conn.label || 'S'}
                   </div>
               </foreignObject>
@@ -586,7 +600,7 @@ export const ProjectView: React.FC<ProjectViewProps> = ({
   const activeItem = contextMenu; 
 
   return (
-    <div className="h-[calc(100vh-80px)] flex flex-col relative overflow-hidden bg-slate-50">
+    <div className="h-full flex flex-col relative overflow-hidden bg-slate-50">
       {/* Toolbar */}
       <div className="h-14 bg-white border-b border-slate-200 flex items-center justify-between px-4 z-10 shadow-sm shrink-0">
          <div className="flex items-center space-x-2">
@@ -703,10 +717,15 @@ export const ProjectView: React.FC<ProjectViewProps> = ({
                 <svg className="absolute inset-0 w-full h-full pointer-events-none">
                     {connections.map(renderConnection)}
                     {drawingLine && (
-                        <line 
-                            x1={drawingLine.startX} y1={drawingLine.startY} 
-                            x2={drawingLine.currX} y2={drawingLine.currY} 
-                            stroke="#64748b" strokeWidth="2" strokeDasharray="5,5" 
+                        <path 
+                            d={getOrthogonalPath(
+                                {x: drawingLine.startX, y: drawingLine.startY}, 
+                                {x: drawingLine.currX, y: drawingLine.currY}
+                            )}
+                            stroke="#64748b" 
+                            strokeWidth="2" 
+                            strokeDasharray="5,5" 
+                            fill="none"
                         />
                     )}
                 </svg>
@@ -737,7 +756,7 @@ export const ProjectView: React.FC<ProjectViewProps> = ({
                                  </div>
                              )}
                              {isCompact && (
-                                 <div className="w-full h-full flex items-center justify-center">
+                                 <div className="w-full h-full flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity">
                                      <div className={`w-2 h-2 rounded-full ${node.type === 'Feed' ? 'bg-green-500' : 'bg-red-500'}`} />
                                      {/* Label floating above */}
                                      <div className="absolute -top-6 left-1/2 transform -translate-x-1/2 bg-slate-800 text-white text-[10px] px-2 py-0.5 rounded opacity-0 group-hover:opacity-100 whitespace-nowrap pointer-events-none transition-opacity">
@@ -754,7 +773,7 @@ export const ProjectView: React.FC<ProjectViewProps> = ({
                                      <div 
                                         key={port.id}
                                         style={{ top, left: -6 }}
-                                        className="absolute w-3 h-3 bg-white border-2 border-slate-400 rounded-full hover:border-orange-500 cursor-pointer z-20"
+                                        className={`absolute w-3 h-3 bg-white border-2 border-slate-400 rounded-full hover:border-orange-500 cursor-pointer z-20 ${isCompact ? 'opacity-0 group-hover:opacity-100 transition-opacity' : ''}`}
                                         title={port.label || 'Input'}
                                         onMouseDown={(e) => handleMouseDown(e, 'port', node.id, port.id)}
                                         onMouseUp={(e) => handleMouseUp(e, 'port', node.id, port.id)}
@@ -768,7 +787,7 @@ export const ProjectView: React.FC<ProjectViewProps> = ({
                                      <div 
                                         key={port.id}
                                         style={{ top, right: -6 }}
-                                        className="absolute w-3 h-3 bg-white border-2 border-slate-400 rounded-full hover:border-orange-500 cursor-pointer z-20"
+                                        className={`absolute w-3 h-3 bg-white border-2 border-slate-400 rounded-full hover:border-orange-500 cursor-pointer z-20 ${isCompact ? 'opacity-0 group-hover:opacity-100 transition-opacity' : ''}`}
                                         title={port.label || 'Output'}
                                         onMouseDown={(e) => handleMouseDown(e, 'port', node.id, port.id)}
                                         onMouseUp={(e) => handleMouseUp(e, 'port', node.id, port.id)}
@@ -783,7 +802,7 @@ export const ProjectView: React.FC<ProjectViewProps> = ({
          </div>
          
          {/* Logger Console Panel (Collapsible) */}
-         <div className={`border-t border-slate-800 bg-slate-900 transition-all duration-300 flex flex-col ${isLogOpen ? 'h-48' : 'h-8'}`}>
+         <div className={`border-t border-slate-800 bg-slate-900 transition-all duration-300 flex flex-col z-20 ${isLogOpen ? 'h-48' : 'h-8'}`}>
              <div className="flex items-center justify-between px-3 h-8 bg-slate-800 text-slate-300 border-b border-slate-700 select-none cursor-pointer" onClick={() => setIsLogOpen(!isLogOpen)}>
                  <div className="flex items-center space-x-2">
                      <Terminal className="w-3.5 h-3.5" />
