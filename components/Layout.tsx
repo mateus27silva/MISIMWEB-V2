@@ -53,6 +53,9 @@ const SidebarItem: React.FC<SidebarItemProps> = ({
 export const Layout: React.FC<LayoutProps> = ({ currentView, onNavigate, onLogout, isAdmin, children }) => {
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
 
+  // Check if the current view requires full screen (no padding/max-width)
+  const isFullWidthView = currentView === EquipmentType.PROJECT;
+
   const navItems = [
     { id: EquipmentType.DASHBOARD, label: 'Dashboard', icon: LayoutDashboard },
     { id: EquipmentType.PROJECT, label: 'Project Flowsheet', icon: FolderKanban },
@@ -128,8 +131,8 @@ export const Layout: React.FC<LayoutProps> = ({ currentView, onNavigate, onLogou
       </aside>
 
       {/* Main Content */}
-      <main className="flex-1 overflow-auto relative pt-16 lg:pt-0">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 h-full">
+      <main className={`flex-1 overflow-auto relative pt-16 lg:pt-0 ${isFullWidthView ? 'overflow-hidden' : ''}`}>
+        <div className={isFullWidthView ? "w-full h-full" : "max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 h-full"}>
           {children}
         </div>
       </main>
